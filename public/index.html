@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lista De Filmes</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <link rel="stylesheet" href="css/style.css" />
+
+  <style>
+    /* overlay usado pelos modais */
+    .modal-overlay { background: rgba(0,0,0,0.75); }
+    /* pequena utilidade para labels escondidas (acessibilidade) */
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+  </style>
+</head>
+<body class="bg-neutral-900 text-white min-h-screen">
+
+  <header class="p-6 flex flex-col gap-4 max-w-7xl mx-auto w-full">
+
+  <div class="flex justify-between items-center w-full">
+    <h1 class="text-3xl font-bold" id="brand">Meus Filmes</h1>
+    <button id="logoutBtn" type="button" class="px-3 py-2 bg-red-600 rounded ml-2 flex-shrink-0" aria-label="Sair">
+      Sair
+    </button>
+  </div>
+
+  <div class="w-full">
+    <label for="searchInput" class="sr-only">Pesquisar filmes</label>
+    <input id="searchInput" type="search" placeholder="Pesquisar título ou sinopse..." class="bg-neutral-800 px-3 py-2 rounded w-full text-lg" />
+  </div>
+
+  <div id="categoryFilters" class="flex flex-wrap gap-2 items-center w-full">
+      </div>
+    
+</header>
+  <main id="main" role="main" class="p-6">
+    <div id="movieGrid" class="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4" aria-live="polite">
+      </div>
+  </main>
+
+  <div id="modal" class="hidden fixed inset-0 modal-overlay flex items-center justify-center px-4 z-50" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-hidden="true">
+    
+    <div id="modalContent" class="bg-neutral-800 w-full max-w-5xl rounded-xl p-6 relative overflow-y-auto max-h-[90vh]">
+
+      <button id="closeModal" type="button" class="absolute top-4 right-4 text-gray-400 hover:text-white" aria-label="Fechar">
+        ✕
+      </button>
+
+      <div class="flex flex-col md:flex-row gap-6 lg:gap-8">
+        
+        <div class="md:w-1/3 flex-shrink-0">
+          
+          <img id="modalPoster" alt="Pôster do filme" class="w-full h-auto rounded-lg shadow-lg" />
+          
+          <div class="flex gap-2 mt-4 edit-element-flex">
+            <button id="modalFetchPoster" class="px-3 py-1 bg-indigo-600 rounded text-sm">Buscar da API</button>
+            <button id="modalUploadBtn" class="px-3 py-1 bg-neutral-700 rounded text-sm">Upload</button>
+            <input id="modalUploadInput" type="file" accept="image/*" class="hidden" />
+            <button id="modalRemovePoster" class="px-3 py-1 bg-red-600 rounded text-sm">Remover</button>
+          </div>
+        </div>
+        
+        <div class="md:w-2/3 flex flex-col">
+          
+          <h2 id="modalTitle" class="text-3xl font-bold mb-2"></h2>
+
+          <div id="modalCategories" class="flex flex-wrap gap-2 mb-4 view-element">
+              </div>
+
+          <div class="mb-4 edit-element">
+            <label for="modalStreaming" class="block mb-1">URL do Streaming</glabel>
+            <input id="modalStreaming" type="url" class="bg-neutral-700 px-3 py-2 rounded w-full" />
+            <div class="flex items-center gap-2 mt-2">
+              <input type="checkbox" id="rememberStreaming" />
+              <label for="rememberStreaming" class="text-sm">Lembrar preferência</label>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label for="modalSinopse" class="block mb-2 font-semibold">Sinopse</label>
+            <textarea id="modalSinopse" class="w-full bg-neutral-700 p-3 rounded min-h-32"></textarea>
+
+            <div class="flex gap-2 mt-3 edit-element-flex">
+              <button id="btnGerarSinopse" type="button" class="px-3 py-2 bg-indigo-600 rounded">Gerar</button>
+              <button id="btnLimparSinopse" type="button" class="px-3 py-2 bg-neutral-700 rounded">Limpar</button>
+              <button id="btnTranslateSinopse" type="button" class="px-3 py-2 bg-sky-600 rounded">Traduzir (EN/PT)</button>
+            </div>
+          </div>
+
+          <div class="mb-4 edit-element">
+            <label class="block mb-2 font-semibold">Categorias</label>
+            <div id="modalCategorySelect" class="flex flex-wrap gap-2" aria-label="Seleção de categorias">
+              </div>
+          </div>
+
+          <div class="flex justify-between mt-auto edit-element"> 
+            <button id="btnDeleteMovie" type="button" class="px-4 py-2 bg-red-600 rounded">Excluir</button>
+            <button id="btnSaveMovie" type="button" class="px-4 py-2 bg-green-600 rounded">Salvar</button>
+          </div>
+          
+        </div> </div> </div>
+  </div>
+
+  <div id="toast" class="toast" aria-live="polite" style="display:none;"></div>
+
+  <script type="module" src="js/addMovies.js"></script>
+
+  <script> lucide.createIcons(); </script>
+
+</body>
+</html>

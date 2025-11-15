@@ -1,0 +1,323 @@
+/* =============================== */
+/* 💎 MELHORIA 2: BOTÕES DE FILTRO */
+/* =============================== */
+
+.filter-btn, .filter-btn-active {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all .2s ease;
+  /* Usando classes do Tailwind como referência */
+}
+
+.filter-btn {
+  background-color: #3f3f46; /* bg-neutral-700 */
+  color: #d4d4d4; /* text-neutral-300 */
+}
+
+.filter-btn:hover {
+  background-color: #52525b; /* bg-neutral-600 */
+}
+
+/* Botão de filtro que está selecionado */
+.filter-btn-active {
+  background-color: #4caf50; /* Verde! */
+  color: #ffffff;
+  transform: scale(1.05);
+}
+
+/* =============================== */
+/* 🔔 TOAST (MENSAGENS) */
+/* =============================== */
+
+.toast {
+  position: fixed;
+  top: 22px;
+  right: 22px;
+  padding: 15px 20px;
+  border-radius: 12px;
+  font-weight: 600;
+  color: white;
+  z-index: 1000;
+  opacity: 0;
+  transform: translateY(-15px);
+  transition: all .35s ease;
+  display: none; /* Começa escondido */
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateY(0);
+  display: block;
+}
+
+.toast-success { background-color: #4caf50; }
+.toast-error   { background-color: #f44336; }
+.toast-warning { background-color: #ffa000; }
+.toast-info    { background-color: #2196F3; }
+
+/* =============================== */
+/* 💡 LOGIN (Tailwind não está no login.html) */
+/* =============================== */
+
+.login-body {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: radial-gradient(circle at center, #141414, #000);
+  min-height: 100vh;
+  padding: 20px;
+  margin: 0;
+  font-family: 'Roboto', sans-serif;
+}
+
+.login-container {
+  width: 360px;
+  max-width: 100%;
+  padding: 45px;
+  background: rgba(25,25,25,0.60);
+  border-radius: 18px;
+  backdrop-filter: blur(14px);
+  text-align: center;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+  border: 1px solid rgba(255,255,255,0.06);
+}
+
+.login-container input {
+  width: 100%;
+  margin: 12px 0;
+  padding: 12px;
+  background: #0f0f0f;
+  border: 1px solid #444;
+  border-radius: 10px;
+  color: #fff;
+  transition: .25s;
+}
+
+.login-container input:focus {
+  outline: none;
+  border-color: #4caf50;
+  box-shadow: 0 0 12px #4caf5077;
+}
+
+.login-container button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 12px;
+  border-radius: 10px;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform .25s ease;
+}
+
+.login-container button:hover {
+  transform: scale(1.05);
+}
+
+#loginBtn {
+  background: linear-gradient(135deg, #4caf50, #66bb6a);
+  color: #fff;
+}
+/* Estilo para botões desabilitados (carregando) */
+#loginBtn:disabled, #googleBtn:disabled {
+  background: #555;
+  cursor: not-allowed;
+  transform: none;
+}
+
+
+#googleBtn {
+  background: linear-gradient(135deg, #db4437, #e35d52);
+  color: #fff;
+}
+
+/* =============================== */
+/* 🎞️ GRID DE FILMES (Estilos customizados) */
+/* =============================== */
+
+/* Estes estilos customizados complementam o Tailwind.
+  Eles são para os cards de filme que são criados pelo JS. 
+*/
+.poster-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 0.75rem; /* rounded-xl */
+  cursor: pointer;
+  background: #18181b; /* bg-neutral-800 */
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.poster-card:hover {
+  transform: scale(1.05);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.poster-image {
+  width: 100%;
+  height: 280px; /* Você pode ajustar isso */
+  object-fit: cover;
+  display: block;
+}
+
+.poster-info {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 1rem;
+  background: linear-gradient(to top, rgba(0,0,0,0.95) 20%, rgba(0,0,0,0.7) 60%, transparent); /* Gradiente mais forte */
+  
+  /* [CORREÇÃO MOBILE] Deixa as informações (título e botões) SEMPRE visíveis */
+  opacity: 1;
+  transform: translateY(0);
+  transition: all 0.3s ease;
+}
+
+/* Não precisamos mais disto, pois a info está sempre visível
+.poster-card:hover .poster-info { ... } 
+*/
+
+.poster-title {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: white;
+}
+
+.poster-description {
+  font-size: 0.85rem;
+  color: #a1a1aa; /* text-neutral-400 */
+  margin-top: 0.25rem;
+  
+  /* [MELHORIA VISUAL] Esconde a descrição em telas pequenas (mobile) para um visual mais limpo */
+  display: none;
+}
+
+/* Mostra a descrição em telas maiores (desktop) APENAS no hover */
+@media (min-width: 768px) { /* breakpoint 'md' do Tailwind */
+  .poster-description {
+    display: block; /* Permite ser exibido */
+    opacity: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: all 0.3s ease;
+  }
+  .poster-card:hover .poster-description {
+    opacity: 1;
+    max-height: 100px; /* Espaço para a descrição */
+  }
+}
+
+/* =============================== */
+/* 💎 MELHORIA 4: MENU DE AÇÕES DO CARD */
+/* =============================== */
+
+.poster-info .actions-menu {
+  position: relative; /* O 'pai' do dropdown */
+  display: inline-block;
+}
+
+.poster-info .actions-menu-btn {
+  background: rgba(40, 40, 40, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  padding: 4px 8px;
+  font-size: 0.8rem;
+  border-radius: 6px;
+  transition: background .2s;
+  cursor: pointer;
+}
+.poster-info .actions-menu-btn:hover {
+  background: #3b82f6; /* azul */
+}
+
+.poster-info .actions-dropdown {
+  display: none; /* Começa escondido */
+  position: absolute;
+  bottom: 110%; /* Aparece ACIMA do botão */
+  right: 0;
+  background: #27272a; /* bg-neutral-800 */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  width: 120px; /* Largura fixa */
+  z-index: 10;
+  overflow: hidden;
+}
+
+.poster-info .actions-dropdown.show {
+  display: block; /* Mostra o menu */
+}
+
+/* Botões 'Editar' e 'Excluir' dentro do menu */
+.poster-info .edit-btn,
+.poster-info .delete-btn {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  color: white;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.poster-info .edit-btn:hover {
+  background: #3b82f6; /* azul */
+}
+.poster-info .delete-btn:hover {
+  background: #ef4444; /* vermelho */
+}
+
+/* O botão 'Leia mais' */
+.poster-info .read-more-btn {
+  background: rgba(40, 40, 40, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: white;
+  padding: 4px 8px;
+  font-size: 0.8rem;
+  border-radius: 6px;
+  transition: background .2s;
+}
+.poster-info .read-more-btn:hover { 
+  background: #4caf50; /* verde */
+}
+
+/* =============================== */
+/* 💎 MELHORIA 5: MODO "LEIA MAIS" */
+/* =============================== */
+
+/* Por padrão, esconde todos os elementos de "edição" */
+#modalContent .edit-element {
+  display: none;
+}
+
+/* Quando o modal está em modo "Leia mais" (view-mode),
+   NÓS ESCONDEMOS os elementos de edição */
+#modalContent.modal-view-mode .edit-element {
+  display: none !important;
+}
+
+/* Quando NÃO está em modo "Leia mais" (ou seja, modo de edição),
+   NÓS MOSTRAMOS os elementos de edição */
+#modalContent:not(.modal-view-mode) .edit-element {
+  display: block; /* ou 'flex' para os que precisam */
+}
+#modalContent:not(.modal-view-mode) .edit-element-flex {
+  display: flex;
+}
+
+/* E no modo de edição, NÓS ESCONDEMOS os elementos de "visualização" */
+#modalContent:not(.modal-view-mode) .view-element {
+  display: none !important;
+}
+
+/* Link do poster no card (Pedido 2) */
+.poster-link {
+  display: block;
+  line-height: 0; /* Remove espaço extra do <a> */
+}
