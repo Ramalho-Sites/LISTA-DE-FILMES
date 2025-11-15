@@ -3,6 +3,7 @@
 Um aplicativo web interativo para pesquisar e exibir informações de filmes, criado com HTML, CSS e JavaScript puro.
 
 ![Demo do Projeto](imagens/Demo.png)
+### 🔗 Acesse o site: [Clique aqui para interagir com o projeto!](https://ramalho-sites.github.io/LISTA-DE-FILMES/)
 
 ## 📜 Sobre o Projeto
 
