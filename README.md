@@ -7,7 +7,6 @@ Um aplicativo web interativo para pesquisar e exibir informações de filmes, cr
 ### 🔗 Acesse o site: [Clique aqui para interagir com o projeto!](https://ramalho-sites.github.io/Davi-ListMovie/)
 
 ---
-
 ## 📜 Sobre o Projeto
 
 Este projeto foi desenvolvido como um exercício prático para consumir dados de uma API de filmes ([The Movie Database - TMDB](https://www.themoviedb.org/)) e exibi-los de forma amigável. O usuário pode pesquisar por um filme específico e a aplicação retorna uma grade com os resultados correspondentes.
@@ -48,7 +47,7 @@ Siga estes passos para rodar o projeto em sua máquina:
     ```
 
 3.  **Abra o `index.html`:**
-    Basta abrir o arquivo `index.html` diretamente no seu navegador de preferência.
+    Basta abrir arquivo `index.html` diretamente no seu navegador de preferência.
 
 > **⚠️ Configuração da API Key (Chave de API):**
 >
@@ -60,7 +59,7 @@ Siga estes passos para rodar o projeto em sua máquina:
 
 ## 👨‍💻 Autor
 
-###### Feito com dedicação por **Davi Ramalho**.
+###### Feito por **Davi Ramalho**.
 
 [![GitHub](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/Ramalho-Sites)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/davi-ramalho-146221379/)
