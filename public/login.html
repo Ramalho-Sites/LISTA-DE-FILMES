@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login - Lista de Filmes</title>
+
+  <!-- Fonte e Ícones -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet"/>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet"/>
+
+  <!-- CSS Principal -->
+  <link rel="stylesheet" href="css/style.css" />
+
+  <style>
+    /* container animado */
+    .login-container {
+      opacity: 0;
+      transform: translateY(30px);
+      animation: fadeSlideIn 0.8s ease-out forwards;
+    }
+
+    @keyframes fadeSlideIn {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* titulo verde */
+    .login-container h1 {
+      color: #4caf50;
+      margin-bottom: 25px;
+    }
+
+    /* link de esqueci senha */
+    #forgotPasswordLink {
+      margin-top: 12px;
+      display: inline-block;
+      cursor: pointer;
+      color: #4caf50;
+      font-weight: bold;
+      transition: 0.3s;
+    }
+    #forgotPasswordLink:hover {
+      color: #81c784;
+    }
+  </style>
+</head>
+
+<body class="login-body">
+
+  <div class="login-container">
+    <h1>🎬 Minha Lista de Filmes</h1>
+
+    <input type="email" id="email" placeholder="E-mail" required />
+    <input type="password" id="password" placeholder="Senha" required />
+
+    <button id="loginBtn">Entrar / Criar Conta</button>
+    <button id="googleBtn">Entrar com Google</button>
+
+    <p id="forgotPasswordLink">Esqueci minha senha</p>
+  </div>
+
+  <!-- Firebase + Auth -->
+<!-- Firebase -->
+<script type="module" src="js/firebase-config.js"></script>
+  <script type="module" src="js/auth.js"></script>
+</body>
+</html>
