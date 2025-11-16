@@ -244,28 +244,29 @@ function buildAddMovieUI() {
 
   // MODAL DE ADIÇÃO
   if (!$("addModal")) {
+    // CÓDIGO MODIFICADO (addMovies.js)
     const modal = document.createElement("div");
     modal.id = "addModal";
     modal.className =
       "hidden fixed inset-0 z-60 flex items-center justify-center modal-overlay p-4";
 
     modal.innerHTML = `
-      <div class="bg-neutral-800 w-full max-w-2xl rounded-xl p-6 relative">
+      <div class="bg-neutral-800 w-full max-w-2xl rounded-xl p-4 md:p-6 relative max-h-[95vh] h-full overflow-y-auto flex flex-col overscroll-contain">
         <button id="closeAddModal" class="absolute top-4 right-4 text-gray-300 hover:text-white">✕</button>
-        <h3 class="text-2xl font-bold mb-4">Adicionar filme</h3>
+        <h3 class="text-2xl font-bold mb-4 flex-shrink-0">Adicionar filme</h3>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 flex-grow overflow-y-auto pr-2">
 
           <div class="relative"> <label class="block mb-1">Título</label>
             <input id="addTitle" class="w-full rounded p-2 bg-neutral-700" autocomplete="off" />
-            
+          
             <div id="addTitleSuggestions"
                 class="absolute z-10 w-full bg-neutral-800 border border-neutral-600 rounded-b-md shadow-lg max-h-48 overflow-y-auto hidden">
             </div>
             
             <label class="block mt-3 mb-1">Sinopse</label>
             <textarea id="addSynopsis" class="w-full rounded p-2 bg-neutral-700 min-h-28"></textarea>
-
+            
             <div class="flex gap-2 mt-2">
               <button id="addGenerateSynopsis" class="px-3 py-1 bg-indigo-600 rounded">Gerar</button>
               <button id="addClearSynopsis" class="px-3 py-1 bg-neutral-700 rounded">Limpar</button>
@@ -306,13 +307,12 @@ function buildAddMovieUI() {
           </div>
         </div>
 
-        <div class="flex justify-between mt-6">
+        <div class="flex justify-between mt-6 flex-shrink-0">
           <button id="cancelAddBtn" class="px-4 py-2 bg-neutral-700 rounded">Cancelar</button>
           <button id="confirmAddBtn" class="px-4 py-2 bg-green-600 rounded">Salvar filme</button>
         </div>
       </div>
     `;
-
     document.body.appendChild(modal);
 
     // EVENTOS
