@@ -3,7 +3,8 @@
 
 import { auth, db } from "./firebase-config.js";
 // [MUDANÇA 1] Importar o 'signOut' para fazer o logout
-import { signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+// CORREÇÃO: Usamos uma versão mais estável para o módulo Auth/Pop-up.
+import { signOut } from "https://www.gstatic.com/firebasejs/9.6.11/firebase-auth.js";
 import {
   collection,
   addDoc,
@@ -52,7 +53,6 @@ let genreMap = new Map();
 
 
 /* ------------------------- HELPERS ------------------------- */
-// A função $ helper pode ficar aqui
 const $ = id => document.getElementById(id);
 
 function showToast(msg, type = "info") {
@@ -153,6 +153,10 @@ let categoriesSet = new Set([
 ]);
 let tmpPosterDataUrl = "";
 let tmpPosterUrl = "";
+// 🎯 NOVAS VARIÁVEIS DE ESTADO PARA EXCLUSÃO MÚLTIPLA
+let multiSelectMode = false;
+let selectedMovies = new Set(); 
+let deleteSelectedBtn;
 
 /* ------------------------- AUTH ------------------------- */
 // Este é o PONTO DE ENTRADA. Fica no topo.
@@ -733,7 +737,25 @@ function renderMovies() {
 
   filtered.forEach(m => {
     const card = document.createElement("div");
-    card.className = "poster-card";
+    // 🎯 ADICIONA 'relative' para posicionar o checkbox/ring
+    card.className = "poster-card relative"; 
+
+    const isSelected = selectedMovies.has(m.id);
+
+    // 🎯 MODO DE SELEÇÃO: Adicionar checkbox e ajuste de CSS
+    if (multiSelectMode) {
+      card.innerHTML += `
+        <input type="checkbox" id="select-${m.id}" 
+               class="absolute top-2 right-2 w-5 h-5 z-20 cursor-pointer checked:accent-red-600"
+               ${isSelected ? 'checked' : ''} />
+      `;
+      // Adicionar um efeito visual para o card selecionado
+      if (isSelected) {
+          card.classList.add('ring-4', 'ring-red-600');
+      } else {
+          card.classList.remove('ring-4', 'ring-red-600');
+      }
+    }
 
     const desc = (m.description || "").substring(0, 120);
 
@@ -743,7 +765,7 @@ function renderMovies() {
     const hasStreamingUrl = m.streamingUrl && (m.streamingUrl.startsWith('http://') || m.streamingUrl.startsWith('https://'));
     const posterImgHtml = `<img src="${m.poster}" class="poster-image" alt="${escapeHtml(m.title)}" onerror="this.style.opacity='.3'" />`;
 
-    card.innerHTML = `
+    card.innerHTML += `
       ${hasStreamingUrl 
         ? `<a href="${m.streamingUrl}" target="_blank" rel="noopener noreferrer" class="poster-link">${posterImgHtml}</a>` 
         : posterImgHtml
@@ -769,41 +791,78 @@ function renderMovies() {
       </div>
     `;
 
-    // [MELHORIA 4 & 5] NOVOS EVENTOS DO CARD
-    
-    // Evento do "Leia mais"
-    card.querySelector(".read-more-btn").onclick = () =>
-      openMainModal(m, false); // <--- false = MODO LEITURA
+    // 🎯 EVENTO PRINCIPAL DO CARD PARA MODO SELEÇÃO/EDIÇÃO
+    card.onclick = (e) => {
+        // Se estiver em modo de seleção, o clique seleciona/desseleciona o card
+        if (multiSelectMode) {
+            // Evita que o clique no checkbox ou menu cause duplo evento
+            if (e.target.type === 'checkbox' || e.target.closest('.actions-menu')) return; 
 
-    // Eventos do Menu
-    const menuBtn = card.querySelector(".actions-menu-btn");
-    const dropdown = card.querySelector(".actions-dropdown");
-
-    menuBtn.onclick = (e) => {
-      e.stopPropagation(); // Impede o card de fechar o menu
-      // Fecha todos os outros menus antes de abrir este
-      document.querySelectorAll(".actions-dropdown.show").forEach(menu => {
-        if (menu !== dropdown) menu.classList.remove("show");
-      });
-      // Alterna (abre/fecha) o menu atual
-      dropdown.classList.toggle("show");
+            if (selectedMovies.has(m.id)) {
+                selectedMovies.delete(m.id);
+            } else {
+                selectedMovies.add(m.id);
+            }
+            
+            // Re-renderiza para atualizar a UI
+            updateDeleteSelectedButton();
+            renderMovies(); 
+        } else {
+            // Comportamento original: Abre o modal 'Leia mais'
+            if (!e.target.closest('.actions-menu')) {
+                 openMainModal(m, false);
+            }
+        }
     };
 
+
+    // 🎯 NOVOS EVENTOS PARA O CHECKBOX (Garante que clique no checkbox funciona)
+    const checkbox = card.querySelector(`#select-${m.id}`);
+    if(checkbox) {
+        checkbox.onclick = (e) => {
+            e.stopPropagation(); // Impede o evento de clique do card (pai)
+            if (e.target.checked) {
+                selectedMovies.add(m.id);
+            } else {
+                selectedMovies.delete(m.id);
+            }
+            updateDeleteSelectedButton();
+            renderMovies(); 
+        };
+    }
+    
+    // Eventos originais do Menu (apenas se não estiver no modo de seleção)
+    const menuBtn = card.querySelector(".actions-menu-btn");
+    const dropdown = card.querySelector(".actions-dropdown");
+    
+    menuBtn.onclick = (e) => {
+        if (!multiSelectMode) {
+             e.stopPropagation(); 
+             document.querySelectorAll(".actions-dropdown.show").forEach(menu => {
+                 if (menu !== dropdown) menu.classList.remove("show");
+             });
+             dropdown.classList.toggle("show");
+        }
+    };
+    
+    // Reaplicar eventos de edição/exclusão individual (se o modo de seleção estiver desativado)
     card.querySelector(".edit-btn").onclick = () => {
-      dropdown.classList.remove("show"); // Fecha o menu
-      openMainModal(m, true); // <--- true = MODO EDIÇÃO
+      if (!multiSelectMode) { dropdown.classList.remove("show"); openMainModal(m, true); }
     };
 
     card.querySelector(".delete-btn").onclick = () => {
-      dropdown.classList.remove("show"); // Fecha o menu
-      deleteMovieConfirm(m.id);
+      if (!multiSelectMode) { dropdown.classList.remove("show"); deleteMovieConfirm(m.id); }
+    };
+    
+    // Desativar "Leia mais" no modo seleção
+    card.querySelector(".read-more-btn").onclick = () => {
+        if (!multiSelectMode) openMainModal(m, false);
     };
 
     movieGrid.appendChild(card);
   });
   
   // Adiciona um clique global para fechar menus abertos
-  // Usamos um listener 'global' para fechar o menu se clicar fora
   document.addEventListener("click", (e) => {
     if (!e.target.closest('.actions-menu')) {
       document.querySelectorAll(".actions-dropdown.show").forEach(menu => {
@@ -817,6 +876,9 @@ function renderMovies() {
 
 // [MELHORIA 5] Função 'openMainModal' MODIFICADA (Pedido 1)
 function openMainModal(movie, editable = false) {
+  // 🎯 Bloquear se estiver no modo de seleção
+  if (multiSelectMode) return;
+    
   editingId = movie.id;
   const modalContent = $("modalContent"); // Pega o div de conteúdo
 
@@ -1014,6 +1076,20 @@ function attachGlobalEvents() {
         addModal.classList.add("hidden");
     }
   });
+
+  // 🎯 EVENTOS DO MODO DE SELEÇÃO
+  const toggleBtn = $("toggleSelectModeBtn");
+  if (toggleBtn) {
+    toggleBtn.onclick = toggleMultiSelectMode;
+  }
+  
+  // 🎯 CRIA O BOTÃO FLUTUANTE DE EXCLUSÃO
+  deleteSelectedBtn = document.createElement('button');
+  deleteSelectedBtn.id = 'deleteSelectedBtn';
+  deleteSelectedBtn.textContent = 'Excluir Selecionados (0)';
+  deleteSelectedBtn.className = 'fixed bottom-6 left-6 bg-red-700 text-white px-5 py-3 rounded-full shadow-xl hover:scale-105 hidden z-40';
+  deleteSelectedBtn.onclick = deleteSelectedMoviesConfirm;
+  document.body.appendChild(deleteSelectedBtn);
   
   // [CORREÇÃO] Adiciona evento para o 'X' do modal principal
   if (closeModalBtn) {
@@ -1134,6 +1210,73 @@ function attachGlobalEvents() {
       }
     };
   }
+}
+
+/* ============================================================
+            LÓGICA DE EXCLUSÃO MÚLTIPLA
+============================================================ */
+/**
+ * Alterna entre o modo de visualização normal e o modo de seleção múltipla.
+ */
+function toggleMultiSelectMode() {
+    multiSelectMode = !multiSelectMode;
+    selectedMovies.clear();
+    
+    const toggleBtn = $("toggleSelectModeBtn");
+    
+    if (multiSelectMode) {
+        toggleBtn.textContent = 'Cancelar Seleção';
+        toggleBtn.className = 'px-3 py-2 bg-red-600 text-white rounded flex-shrink-0';
+        $("addMovieFab").classList.add('hidden'); // Esconde o FAB de adição
+        deleteSelectedBtn.classList.remove('hidden'); // Mostra o botão de exclusão
+    } else {
+        toggleBtn.textContent = 'Selecionar';
+        toggleBtn.className = 'px-3 py-2 bg-neutral-700 text-white rounded flex-shrink-0';
+        $("addMovieFab").classList.remove('hidden'); // Mostra o FAB de adição
+        deleteSelectedBtn.classList.add('hidden'); // Esconde o botão de exclusão
+    }
+    
+    updateDeleteSelectedButton();
+    renderMovies(); // Renderiza novamente para mostrar/esconder os checkboxes
+}
+
+/**
+ * Atualiza o texto e estado (disabled) do botão de exclusão múltipla.
+ */
+function updateDeleteSelectedButton() {
+    deleteSelectedBtn.textContent = `Excluir Selecionados (${selectedMovies.size})`;
+    deleteSelectedBtn.disabled = selectedMovies.size === 0;
+}
+
+/**
+ * Confirma e executa a exclusão de todos os filmes selecionados.
+ */
+async function deleteSelectedMoviesConfirm() {
+    if (selectedMovies.size === 0) return showToast("Selecione pelo menos um filme.", "warning");
+    
+    if (!confirm(`Deseja realmente excluir ${selectedMovies.size} filme(s)?`)) return;
+    
+    try {
+        let deletedCount = 0;
+        const promises = [];
+        
+        selectedMovies.forEach(movieId => {
+            const ref = doc(db, "users", userId, "movies", movieId);
+            promises.push(deleteDoc(ref).then(() => { deletedCount++; }));
+        });
+        
+        await Promise.all(promises);
+        
+        showToast(`${deletedCount} filme(s) excluído(s) com sucesso!`, "success");
+        
+        // Finaliza o modo de seleção e recarrega os filmes
+        toggleMultiSelectMode(); 
+        await loadMovies();
+
+    } catch (e) {
+        console.error(e);
+        showToast("Erro ao excluir filmes selecionados.", "error");
+    }
 }
 
 /* ---------------- DEBUG ---------------- */
