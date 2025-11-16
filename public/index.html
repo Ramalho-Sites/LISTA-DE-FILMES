@@ -7,6 +7,35 @@
 
   <script src="https://cdn.tailwindcss.com"></script>
 
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'neutral': { // Cor de fundo principal
+              900: '#0a0a0a',
+              800: '#171717',
+              700: '#262626',
+              600: '#404040',
+              500: '#737373',
+            },
+            'indigo': { // Cor principal (Botões/Links)
+              600: '#4f46e5',
+            },
+            'green': { // Cor de Sucesso (Salvar)
+              600: '#16a34a',
+            },
+            'red': { // Cor de Erro (Excluir/Sair)
+              600: '#dc2626',
+            },
+            'sky': { // Cor de Ação Secundária (Traduzir)
+              600: '#0284c7',
+            }
+          }
+        }
+      }
+    }
+  </script>
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <link rel="stylesheet" href="css/style.css" />
