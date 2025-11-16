@@ -153,7 +153,7 @@ function fileToDataURL(file) {
 let userId = null;
 let movies = [];
 let editingId = null;
-let activeCategoryFilter = "";
+// ❌ REMOVIDO: activeCategoryFilter = "";
 let userPreferences = {};
 let categoriesSet = new Set([
   "Ação", "Terror", "Comédia", "Romance", "Fantasia",
@@ -166,6 +166,9 @@ let multiSelectMode = false;
 let selectedMovies = new Set(); 
 let deleteSelectedBtn;
 let currentSortBy = "date"; // 'date' (Mais Recentes) ou 'title' (A-Z)
+// 🎯 NOVO ESTADO: Filtro Múltiplo de Categoria
+let activeCategoryFilters = new Set();
+
 
 /* ------------------------- AUTH ------------------------- */
 // Este é o PONTO DE ENTRADA. Fica no topo.
@@ -572,24 +575,40 @@ function rebuildCategoryOptions() {
   if (!filterContainer) return;
 
   filterContainer.innerHTML = "";
-
+  
+  // 🎯 BOTÃO 'TODOS': Limpa todos os filtros ativos
   const allBtn = document.createElement("button");
   allBtn.textContent = "Todos";
-  allBtn.className = activeCategoryFilter === "" ? "filter-btn-active" : "filter-btn";
-  allBtn.onclick = () => setCategoryFilter("");
+  // O botão 'Todos' está ativo se activeCategoryFilters estiver vazio
+  allBtn.className = activeCategoryFilters.size === 0 ? "filter-btn-active" : "filter-btn";
+  allBtn.onclick = () => {
+      activeCategoryFilters.clear(); // Limpa todos
+      rebuildCategoryOptions();
+      renderMovies();
+  };
   filterContainer.appendChild(allBtn);
+
 
   [...categoriesSet].sort().forEach(category => {
     const btn = document.createElement("button");
     btn.textContent = category;
-    btn.className = activeCategoryFilter === category ? "filter-btn-active" : "filter-btn";
+    // 🎯 VERIFICAÇÃO SE A CATEGORIA ESTÁ ATIVA
+    const isActive = activeCategoryFilters.has(category);
+    btn.className = isActive ? "filter-btn-active" : "filter-btn";
     btn.onclick = () => setCategoryFilter(category);
     filterContainer.appendChild(btn);
   });
 }
 
+// 🎯 FUNÇÃO MODIFICADA PARA TOGGLE (LIGA/DESLIGA)
 function setCategoryFilter(category) {
-  activeCategoryFilter = category;
+  // 🎯 LÓGICA DE TOGGLE (liga/desliga)
+  if (activeCategoryFilters.has(category)) {
+    activeCategoryFilters.delete(category);
+  } else {
+    activeCategoryFilters.add(category);
+  }
+  
   rebuildCategoryOptions();
   renderMovies();
 }
@@ -764,7 +783,8 @@ function renderMovies() {
   movieGrid.innerHTML = "";
 
   const term = (document.querySelector("#searchInput")?.value || "").toLowerCase();
-  const filtro = activeCategoryFilter;
+  // ❌ REMOVIDO: const filtro = activeCategoryFilter; (usaremos o Set)
+  const isFilteringByCategories = activeCategoryFilters.size > 0;
 
   // 🎯 LÓGICA DE ORDENAÇÃO (APLICADA AQUI)
   let sortedMovies = [...movies]; // Cria uma cópia
@@ -784,7 +804,13 @@ function renderMovies() {
   const filtered = sortedMovies.filter(m => {
     const titleMatch = (m.title || "").toLowerCase().includes(term);
     const descMatch = (m.description || "").toLowerCase().includes(term);
-    const catMatch = !filtro || (m.categories || []).includes(filtro);
+    
+    // 🎯 LÓGICA OR PARA FILTROS DE CATEGORIA
+    // Se não houver filtro ativo, catMatch é true.
+    // Se houver filtro, catMatch é true se o filme tiver PELO MENOS UMA das categorias ativas.
+    const catMatch = !isFilteringByCategories || 
+                     (m.categories || []).some(cat => activeCategoryFilters.has(cat));
+    
     return (titleMatch || descMatch) && catMatch;
   });
 
