@@ -122,9 +122,8 @@ document.addEventListener("DOMContentLoaded", () => {
      Login com Google
   ========================= */
   googleBtn.addEventListener("click", async () => {
-    // [MELHORIA] Desabilita os botões antes de tentar o login
-    setButtonsLoading(true);
-
+    setButtonsLoading(true); // <-- CHAME AQUI
+    
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
