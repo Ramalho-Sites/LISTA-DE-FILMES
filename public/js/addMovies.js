@@ -41,6 +41,13 @@ let modalRemovePoster;
 let toastEl;
 let btnTranslateSinopse; 
 
+// 🎯 NOVAS VARIÁVEIS PARA O MODAL CUSTOMIZADO
+let confirmDialog;
+let confirmTitle;
+let confirmMessage;
+let confirmOKBtn;
+let confirmCancelBtn;
+
 // ==================================================
 // 💎 CONFIGURAÇÕES DA NOVA API (TMDb) 💎
 // ==================================================
@@ -197,6 +204,13 @@ async function initApp() {
   modalRemovePoster = $("modalRemovePoster");
   toastEl = $("toast"); // Garante que o toast seja pego
   btnTranslateSinopse = $("btnTranslateSinopse"); 
+  
+  // 🎯 ATRIBUIÇÃO DOS ELEMENTOS DO MODAL CUSTOMIZADO
+  confirmDialog = $("confirmDialog");
+  confirmTitle = $("confirmTitle");
+  confirmMessage = $("confirmMessage");
+  confirmOKBtn = $("confirmOKBtn");
+  confirmCancelBtn = $("confirmCancelBtn");
   
   // O resto da inicialização...
   await loadGenresTMDb(); // Carrega os nomes dos gêneros
@@ -981,9 +995,14 @@ async function saveModalChanges() {
 
 /* ---------------- DELETE MOVIE ---------------- */
 
+// 🎯 FUNÇÃO DE EXCLUSÃO ÚNICA AGORA USA O MODAL CUSTOMIZADO
 async function deleteMovieConfirm(id) {
   if (!id) return;
-  if (!confirm("Deseja realmente excluir esse filme?")) return;
+  
+  const message = `Deseja realmente excluir esse filme?`;
+  const confirmed = await showCustomConfirm("Confirmação de Exclusão", message, "Excluir");
+
+  if (!confirmed) return;
 
   try {
     await deleteDoc(doc(db, "users", userId, "movies", id));
@@ -1074,6 +1093,11 @@ function attachGlobalEvents() {
       const addModal = $("addModal");
       if (addModal && !addModal.classList.contains("hidden"))
         addModal.classList.add("hidden");
+        
+      // 🎯 Fecha modal customizado no ESC
+      if (confirmDialog && !confirmDialog.classList.contains("hidden")) {
+          confirmDialog.classList.add('hidden');
+      }
     }
   });
 
@@ -1213,6 +1237,46 @@ function attachGlobalEvents() {
 }
 
 /* ============================================================
+             MODAL DE CONFIRMAÇÃO CUSTOMIZADO
+============================================================ */
+/**
+ * Exibe um modal de confirmação customizado no lugar do window.confirm.
+ * @param {string} title Título do modal.
+ * @param {string} message Mensagem de confirmação.
+ * @param {string} okText Texto do botão OK.
+ * @returns {Promise<boolean>} Retorna true se OK for clicado, false se Cancel.
+ */
+function showCustomConfirm(title, message, okText = "Confirmar") {
+    return new Promise(resolve => {
+        if (!confirmDialog) {
+            // Fallback se o modal não for encontrado
+            return resolve(window.confirm(message));
+        }
+
+        confirmTitle.textContent = title;
+        confirmMessage.textContent = message;
+        confirmOKBtn.textContent = okText;
+
+        confirmDialog.classList.remove('hidden');
+
+        // Garante que o modal feche e resolva a promessa
+        const cleanup = (result) => {
+            confirmDialog.classList.add('hidden');
+            confirmOKBtn.onclick = null;
+            confirmCancelBtn.onclick = null;
+            resolve(result);
+        };
+
+        // Evento OK
+        confirmOKBtn.onclick = () => cleanup(true);
+
+        // Evento Cancelar (ou fechar ao clicar fora, se quiser)
+        confirmCancelBtn.onclick = () => cleanup(false);
+    });
+}
+
+
+/* ============================================================
             LÓGICA DE EXCLUSÃO MÚLTIPLA
 ============================================================ */
 /**
@@ -1251,10 +1315,14 @@ function updateDeleteSelectedButton() {
 /**
  * Confirma e executa a exclusão de todos os filmes selecionados.
  */
+// 🎯 FUNÇÃO DE EXCLUSÃO MÚLTIPLA AGORA USA O MODAL CUSTOMIZADO
 async function deleteSelectedMoviesConfirm() {
     if (selectedMovies.size === 0) return showToast("Selecione pelo menos um filme.", "warning");
     
-    if (!confirm(`Deseja realmente excluir ${selectedMovies.size} filme(s)?`)) return;
+    const message = `Deseja realmente excluir ${selectedMovies.size} filme(s)?`;
+    const confirmed = await showCustomConfirm("Confirmação de Exclusão", message, "Excluir");
+    
+    if (!confirmed) return;
     
     try {
         let deletedCount = 0;
