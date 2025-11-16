@@ -1,9 +1,4 @@
-// public/js/addMovies.js
-/* eslint-disable no-unused-vars */
-
 import { auth, db } from "./firebase-config.js";
-// [MUDANÇA 1] Importar o 'signOut' para fazer o logout
-// CORREÇÃO: Usamos uma versão mais estável para o módulo Auth/Pop-up.
 import { signOut } from "https://www.gstatic.com/firebasejs/9.6.11/firebase-auth.js";
 import {
   collection,
@@ -47,6 +42,9 @@ let confirmTitle;
 let confirmMessage;
 let confirmOKBtn;
 let confirmCancelBtn;
+
+// 🎯 NOVA VARIÁVEL PARA O INPUT DE URL NO MODAL PRINCIPAL
+let modalPosterUrl;
 
 // ==================================================
 // 💎 CONFIGURAÇÕES DA NOVA API (TMDb) 💎
@@ -205,7 +203,8 @@ async function initApp() {
   toastEl = $("toast"); // Garante que o toast seja pego
   btnTranslateSinopse = $("btnTranslateSinopse"); 
   
-  // 🎯 ATRIBUIÇÃO DOS ELEMENTOS DO MODAL CUSTOMIZADO
+  // 🎯 ATRIBUIÇÃO DOS ELEMENTOS DE EDIÇÃO DE URL E MODAL CUSTOMIZADO
+  modalPosterUrl = $("modalPosterUrl");
   confirmDialog = $("confirmDialog");
   confirmTitle = $("confirmTitle");
   confirmMessage = $("confirmMessage");
@@ -930,6 +929,11 @@ function openMainModal(movie, editable = false) {
   modalStreaming.value = movie.streamingUrl ?? "";
   rememberStreaming.checked = movie.remember ?? false;
 
+  // 🎯 Adicionar a URL do pôster ao campo de input (Edição de URL)
+  if (modalPosterUrl) {
+    modalPosterUrl.value = movie.poster || "";
+  }
+
   // Popula as pills de categoria (modo visualização)
   modalCategories.innerHTML = "";
   (movie.categories || []).forEach(c => {
@@ -969,6 +973,9 @@ async function saveModalChanges() {
     modalCategorySelectContainer.querySelectorAll("input[type=checkbox]:checked")
   ).map(i => i.value);
 
+  // 🎯 Pega a URL do novo input de texto, se existir.
+  const newPosterUrl = modalPosterUrl ? modalPosterUrl.value.trim() : modalPoster.src || "";
+  
   try {
     const ref = doc(db, "users", userId, "movies", editingId);
 
@@ -979,7 +986,7 @@ async function saveModalChanges() {
       // rating: modalRating.value ? Number(modalRating.value) : null, // <--- REMOVIDO
       streamingUrl: modalStreaming.value || null,
       remember: rememberStreaming.checked,
-      poster: modalPoster.src || ""
+      poster: newPosterUrl 
     };
 
     await updateDoc(ref, updated);
@@ -1030,11 +1037,18 @@ async function handleEditFetchPoster() {
 
   const movieId = searchResults[0].id;
   const movieDetails = await fetchMovieDetailsTMDb(movieId);
+  
+  const posterUrl = movieDetails.poster_path ? `${TMDB_IMG_BASE_URL}${movieDetails.poster_path}` : '';
 
   if (movieDetails) {
     modalTitle.textContent = movieDetails.title_pt_BR || movieDetails.title || "";
     modalSinopse.value = movieDetails.overview || "Sinopse não disponível.";
-    modalPoster.src = movieDetails.poster_path ? `${TMDB_IMG_BASE_URL}${movieDetails.poster_path}` : '';
+    
+    modalPoster.src = posterUrl;
+    // 🎯 Atualiza o novo campo de input com a URL buscada
+    if (modalPosterUrl) {
+        modalPosterUrl.value = posterUrl;
+    }
     
     const newCategories = movieDetails.genres ? movieDetails.genres.map(g => g.name) : [];
     newCategories.forEach(c => categoriesSet.add(c));
@@ -1065,6 +1079,12 @@ async function handleEditPosterUpload(e) {
   try {
     const data = await fileToDataURL(file);
     modalPoster.src = data; 
+    
+    // 🎯 Limpa o campo de URL ao fazer upload de arquivo
+    if (modalPosterUrl) {
+        modalPosterUrl.value = data; 
+    }
+    
     showToast("Upload do pôster concluído!");
   } catch (err) {
     console.error("Erro no upload:", err);
@@ -1074,6 +1094,10 @@ async function handleEditPosterUpload(e) {
 
 function handleEditRemovePoster() {
   modalPoster.src = ""; 
+  // 🎯 Limpa o campo de URL ao remover o pôster
+  if (modalPosterUrl) {
+      modalPosterUrl.value = "";
+  }
   showToast("Pôster removido");
 }
 
@@ -1208,6 +1232,13 @@ function attachGlobalEvents() {
         showToast("Tradução não encontrada.", "warning");
       }
     };
+  }
+  
+  // 🎯 NOVO EVENTO: Pré-visualizar URL no modal de edição
+  if (modalPosterUrl) {
+      modalPosterUrl.oninput = (e) => {
+          modalPoster.src = e.target.value;
+      };
   }
 
   if (modalFetchPoster) {
