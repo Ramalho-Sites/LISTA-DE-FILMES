@@ -1,4 +1,9 @@
+// public/js/addMovies.js
+/* eslint-disable no-unused-vars */
+
 import { auth, db } from "./firebase-config.js";
+// [MUDANÇA 1] Importar o 'signOut' para fazer o logout
+// CORREÇÃO: Usamos uma versão mais estável para o módulo Auth/Pop-up.
 import { signOut } from "https://www.gstatic.com/firebasejs/9.6.11/firebase-auth.js";
 import {
   collection,
@@ -8,7 +13,7 @@ import {
   deleteDoc,
   doc,
   query,
-  orderBy,
+  // ❌ REMOVIDO: orderBy (a ordenação é feita no lado do cliente para flexibilidade)
   getDoc,
   setDoc
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
@@ -42,9 +47,7 @@ let confirmTitle;
 let confirmMessage;
 let confirmOKBtn;
 let confirmCancelBtn;
-
-// 🎯 NOVA VARIÁVEL PARA O INPUT DE URL NO MODAL PRINCIPAL
-let modalPosterUrl;
+let modalPosterUrl; // Input de URL de pôster no modal principal
 
 // ==================================================
 // 💎 CONFIGURAÇÕES DA NOVA API (TMDb) 💎
@@ -158,10 +161,11 @@ let categoriesSet = new Set([
 ]);
 let tmpPosterDataUrl = "";
 let tmpPosterUrl = "";
-// 🎯 NOVAS VARIÁVEIS DE ESTADO PARA EXCLUSÃO MÚLTIPLA
+// 🎯 VARIÁVEIS DE ESTADO
 let multiSelectMode = false;
 let selectedMovies = new Set(); 
 let deleteSelectedBtn;
+let currentSortBy = "date"; // 'date' (Mais Recentes) ou 'title' (A-Z)
 
 /* ------------------------- AUTH ------------------------- */
 // Este é o PONTO DE ENTRADA. Fica no topo.
@@ -217,6 +221,7 @@ async function initApp() {
   buildAddMovieUI(); // Agora vai funcionar
   await loadMovies();
   rebuildCategoryOptions(); // Agora vai funcionar
+  renderSortFilters(); // 🎯 Renderiza os botões de ordenação e define o estado inicial
   attachGlobalEvents();
 }
 
@@ -589,6 +594,34 @@ function setCategoryFilter(category) {
   renderMovies();
 }
 
+/* ----------------- RENDER/CONTROL SORT ----------------- */
+
+function renderSortFilters() {
+    const sortContainer = $("sortFilters");
+    if (!sortContainer) return;
+    
+    // Atualiza os botões de ordenação
+    const dateBtn = $("sortByDateBtn");
+    const titleBtn = $("sortByTitleBtn");
+
+    if (dateBtn) {
+        dateBtn.className = currentSortBy === "date" ? "filter-btn-active" : "filter-btn";
+        dateBtn.onclick = () => setSortBy("date");
+    }
+    if (titleBtn) {
+        titleBtn.className = currentSortBy === "title" ? "filter-btn-active" : "filter-btn";
+        titleBtn.onclick = () => setSortBy("title");
+    }
+}
+
+function setSortBy(sortBy) {
+    if (currentSortBy === sortBy) return; // Não faz nada se já estiver ativo
+
+    currentSortBy = sortBy;
+    renderSortFilters();
+    renderMovies(); // Re-renderiza a lista com a nova ordenação
+}
+
 /* ============================================================
                 ADICIONAR FILME
 ============================================================ */
@@ -700,7 +733,7 @@ async function loadMovies() {
   try {
     const q = query(
       collection(db, "users", userId, "movies"),
-      orderBy("createdAt", "desc")
+      // 🎯 REMOVIDO orderBy: A ordenação é feita no lado do cliente (renderMovies)
     );
 
     const snap = await getDocs(q);
@@ -733,7 +766,22 @@ function renderMovies() {
   const term = (document.querySelector("#searchInput")?.value || "").toLowerCase();
   const filtro = activeCategoryFilter;
 
-  const filtered = movies.filter(m => {
+  // 🎯 LÓGICA DE ORDENAÇÃO (APLICADA AQUI)
+  let sortedMovies = [...movies]; // Cria uma cópia
+
+  if (currentSortBy === "title") {
+    sortedMovies.sort((a, b) => {
+      const titleA = (a.title || "").toLowerCase();
+      const titleB = (b.title || "").toLowerCase();
+      return titleA.localeCompare(titleB);
+    });
+  } else {
+    // Padrão: 'date' (Mais Recentes)
+    sortedMovies.sort((a, b) => b.createdAt - a.createdAt);
+  }
+
+  // 🎯 FILTRAGEM AGORA USA sortedMovies
+  const filtered = sortedMovies.filter(m => {
     const titleMatch = (m.title || "").toLowerCase().includes(term);
     const descMatch = (m.description || "").toLowerCase().includes(term);
     const catMatch = !filtro || (m.categories || []).includes(filtro);
@@ -1139,6 +1187,13 @@ function attachGlobalEvents() {
   deleteSelectedBtn.onclick = deleteSelectedMoviesConfirm;
   document.body.appendChild(deleteSelectedBtn);
   
+  // 🎯 NOVO EVENTO: Pré-visualizar URL no modal de edição
+  if (modalPosterUrl) {
+      modalPosterUrl.oninput = (e) => {
+          modalPoster.src = e.target.value;
+      };
+  }
+
   // [CORREÇÃO] Adiciona evento para o 'X' do modal principal
   if (closeModalBtn) {
     closeModalBtn.onclick = () => {
@@ -1232,13 +1287,6 @@ function attachGlobalEvents() {
         showToast("Tradução não encontrada.", "warning");
       }
     };
-  }
-  
-  // 🎯 NOVO EVENTO: Pré-visualizar URL no modal de edição
-  if (modalPosterUrl) {
-      modalPosterUrl.oninput = (e) => {
-          modalPoster.src = e.target.value;
-      };
   }
 
   if (modalFetchPoster) {

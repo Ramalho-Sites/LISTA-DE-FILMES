@@ -73,7 +73,16 @@
   <div id="categoryFilters" class="flex flex-wrap gap-2 items-center w-full">
       </div>
     
-</header>
+  <div id="sortFilters" class="flex flex-wrap gap-3 items-center w-full pt-4 border-t border-neutral-700 mt-4">
+    <span class="text-neutral-400 text-sm font-semibold">Ordenar por:</span>
+    <button id="sortByDateBtn" data-sort="date" class="filter-btn">
+      Mais Recentes
+    </button>
+    <button id="sortByTitleBtn" data-sort="title" class="filter-btn">
+      Título (A-Z)
+    </button>
+  </div>
+  </header>
   <main id="main" role="main" class="p-6">
     <div id="movieGrid" class="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4" aria-live="polite">
       </div>
