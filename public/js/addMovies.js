@@ -168,6 +168,47 @@ let deleteSelectedBtn;
 let currentSortBy = "date"; // 'date' (Mais Recentes) ou 'title' (A-Z)
 // 🎯 NOVO ESTADO: Filtro Múltiplo de Categoria
 let activeCategoryFilters = new Set();
+// 🎯 NOVO ESTADO DE IDIOMA
+let currentLang = "pt-BR"; // 'pt-BR' ou 'en-US'
+// 🎯 VARIÁVEL TEMPORÁRIA PARA O TÍTULO ORIGINAL (usado na Adição)
+let tmpOriginalTitle = ""; 
+
+
+// 🎯 MAPA DE TRADUÇÃO DO SITE (UI TEXTS)
+const textMap = {
+    "pt-BR": {
+        brand: "Meus Filmes",
+        select_toggle_off: "Selecionar",
+        select_toggle_on: "Cancelar Seleção",
+        delete_selected: "Excluir Selecionados",
+        sort_by: "Ordenar por:",
+        sort_date: "Mais Recentes",
+        sort_title: "Título (A-Z)",
+        logout: "Sair",
+        read_more: "Leia mais",
+        // Tradução literal de CATEGORIAS (Filtros)
+        "Ação": "Ação", "Terror": "Terror", "Comédia": "Comédia", "Romance": "Romance", 
+        "Fantasia": "Fantasia", "Thriller": "Thriller", "Suspense": "Suspense", 
+        "Drama": "Drama", "Ficção Científica": "Ficção Científica",
+        "Todos": "Todos"
+    },
+    "en-US": {
+        brand: "My Watchlist",
+        select_toggle_off: "Select",
+        select_toggle_on: "Cancel Selection",
+        delete_selected: "Delete Selected",
+        sort_by: "Sort by:",
+        sort_date: "Most Recent",
+        sort_title: "Title (A-Z)",
+        logout: "Logout",
+        read_more: "Read more",
+        // Tradução literal de CATEGORIAS (Filtros)
+        "Ação": "Action", "Terror": "Horror", "Comédia": "Comedy", "Romance": "Romance", 
+        "Fantasia": "Fantasy", "Thriller": "Thriller", "Suspense": "Suspense", 
+        "Drama": "Drama", "Ficção Científica": "Science Fiction",
+        "Todos": "All"
+    }
+};
 
 
 /* ------------------------- AUTH ------------------------- */
@@ -223,8 +264,12 @@ async function initApp() {
   await loadUserPreferences();
   buildAddMovieUI(); // Agora vai funcionar
   await loadMovies();
+  
+  // 🎯 CHAMA A FUNÇÃO DE LOCALIZAÇÃO INICIAL
+  applyLocalization(); 
+  
   rebuildCategoryOptions(); // Agora vai funcionar
-  renderSortFilters(); // 🎯 Renderiza os botões de ordenação e define o estado inicial
+  renderSortFilters(); // Renderiza os botões de ordenação e define o estado inicial
   attachGlobalEvents();
 }
 
@@ -293,8 +338,8 @@ function buildAddMovieUI() {
             <textarea id="addSynopsis" class="w-full rounded p-2 bg-neutral-700 min-h-28"></textarea>
             
             <div class="flex gap-2 mt-2">
-              <button id="addGenerateSynopsis" class="px-3 py-1 bg-indigo-600 rounded">Gerar</button>
-              <button id="addClearSynopsis" class="px-3 py-1 bg-neutral-700 rounded">Limpar</button>
+              <button id="addGenerateSynopsis" type="button" class="px-3 py-1 bg-indigo-600 rounded">Gerar</button>
+              <button id="addClearSynopsis" type="button" class="px-3 py-1 bg-neutral-700 rounded">Limpar</button>
             </div>
           </div>
 
@@ -303,10 +348,10 @@ function buildAddMovieUI() {
             <input id="addPosterUrl" class="w-full rounded p-2 bg-neutral-700" placeholder="https://..." />
 
             <div class="flex gap-2 mt-2">
-              <button id="addFetchPoster" class="px-3 py-1 bg-indigo-600 rounded">Buscar da API</button>
-              <button id="addUploadBtn" class="px-3 py-1 bg-neutral-700 rounded">Upload</button>
+              <button id="addFetchPoster" type="button" class="px-3 py-1 bg-indigo-600 rounded">Buscar da API</button>
+              <button id="addUploadBtn" type="button" class="px-3 py-1 bg-neutral-700 rounded">Upload</button>
               <input id="addUploadInput" type="file" accept="image/*" class="hidden" />
-              <button id="addRemovePoster" class="px-3 py-1 bg-red-600 rounded">Remover</button>
+              <button id="addRemovePoster" type="button" class="px-3 py-1 bg-red-600 rounded">Remover</button>
             </div>
 
             <img id="addPosterPreview"
@@ -318,7 +363,7 @@ function buildAddMovieUI() {
 
             <div class="flex gap-2 mt-2">
               <input id="addNewCategory" class="rounded p-2 bg-neutral-700 w-full" placeholder="Nova categoria" />
-              <button id="addCategoryBtnLocal" class="px-3 py-1 bg-green-600 rounded">Criar</button>
+              <button id="addCategoryBtnLocal" type="button" class="px-3 py-1 bg-green-600 rounded">Criar</button>
             </div>
 
             <label class="block mt-3 mb-1">URL streaming</label>
@@ -333,8 +378,8 @@ function buildAddMovieUI() {
         </div>
 
         <div class="flex justify-between mt-6 flex-shrink-0">
-          <button id="cancelAddBtn" class="px-4 py-2 bg-neutral-700 rounded">Cancelar</button>
-          <button id="confirmAddBtn" class="px-4 py-2 bg-green-600 rounded">Salvar filme</button>
+          <button id="cancelAddBtn" type="button" class="px-4 py-2 bg-neutral-700 rounded">Cancelar</button>
+          <button id="confirmAddBtn" type="button" class="px-4 py-2 bg-green-600 rounded">Salvar filme</button>
         </div>
       </div>
     `;
@@ -440,7 +485,10 @@ function buildAddMovieUI() {
       addTitleSuggestions.classList.add("hidden"); // Esconde as sugestões
 
       if (movieDetails) {
-        $("addTitle").value = movieDetails.title_pt_BR || movieDetails.title || "";
+        // 🎯 SALVA O TÍTULO ORIGINAL, se existir, senão usa o traduzido
+        tmpOriginalTitle = movieDetails.original_title || movieDetails.title || "";
+        
+        $("addTitle").value = movieDetails.title || movieDetails.original_title || "";
         $("addSynopsis").value = movieDetails.overview || "Sinopse não disponível.";
         
         const posterUrl = movieDetails.poster_path ? `${TMDB_IMG_BASE_URL}${movieDetails.poster_path}` : '';
@@ -494,8 +542,14 @@ async function handleFetchPoster() {
   const movieDetails = await fetchMovieDetailsTMDb(movieId);
 
   if (movieDetails) {
+    // 🎯 TÍTULO PRIMÁRIO para o campo 'title' do Firebase
+    const apiTitle = movieDetails.title || movieDetails.original_title || "";
+    
+    // 🎯 SALVA O TÍTULO ORIGINAL, se existir, senão usa o traduzido
+    tmpOriginalTitle = movieDetails.original_title || apiTitle;
+
     // Preenche o título com o nome oficial (em PT-BR, se houver)
-    $("addTitle").value = movieDetails.title_pt_BR || movieDetails.title || "";
+    $("addTitle").value = apiTitle;
       
     const posterUrl = movieDetails.poster_path ? `${TMDB_IMG_BASE_URL}${movieDetails.poster_path}` : '';
     resetPosterPreview(posterUrl); // Usa a função adaptada
@@ -557,16 +611,68 @@ function resetPosterPreview(posterUrl = "") {
   }
 }
 
+/* ----------------- LOCALIZATION ----------------- */
+
+/**
+ * Traduz os textos estáticos da UI e atualiza os botões/filtros.
+ */
+function applyLocalization() {
+    const texts = textMap[currentLang];
+    
+    // 1. Títulos principais e botões de controle
+    const brand = $("brand");
+    if (brand) brand.textContent = texts.brand;
+    
+    // Botão Sair
+    const logoutBtnEl = $("logoutBtn");
+    if (logoutBtnEl) logoutBtnEl.textContent = texts.logout;
+    
+    const toggleBtn = $("toggleSelectModeBtn");
+    if (toggleBtn) {
+        if (multiSelectMode) {
+             toggleBtn.textContent = texts.select_toggle_on;
+        } else {
+             toggleBtn.textContent = texts.select_toggle_off;
+        }
+    }
+    
+    if (deleteSelectedBtn) {
+        updateDeleteSelectedButton(); // Atualiza o texto de exclusão
+    }
+
+    // 2. Filtros e Ordenação (re-renderiza UI dinamicamente)
+    rebuildCategoryOptions();
+    renderSortFilters();
+    
+    // 3. Re-renderiza filmes para aplicar o título correto
+    renderMovies(); 
+}
+
+/**
+ * Alterna entre pt-BR e en-US.
+ */
+function toggleLanguage() {
+    currentLang = currentLang === 'pt-BR' ? 'en-US' : 'pt-BR';
+    // Reinicia filtros e ordenação ao mudar de idioma para evitar inconsistências
+    activeCategoryFilters.clear();
+    currentSortBy = "date"; 
+    
+    applyLocalization();
+}
+
+
 /* ---------------- CATEGORY OPTIONS ---------------- */
 
 function rebuildCategoryOptions() {
+  const texts = textMap[currentLang]; // 🎯 PEGA O MAPA DE TEXTO
+
   const addSel = $("addCategories");
   if (addSel) {
     addSel.innerHTML = "";
     [...categoriesSet].sort().forEach(c => {
       const opt = document.createElement("option");
       opt.value = c;
-      opt.textContent = c;
+      opt.textContent = texts[c] || c; // Traduz categoria no modal Adicionar
       addSel.appendChild(opt);
     });
   }
@@ -578,7 +684,7 @@ function rebuildCategoryOptions() {
   
   // 🎯 BOTÃO 'TODOS': Limpa todos os filtros ativos
   const allBtn = document.createElement("button");
-  allBtn.textContent = "Todos";
+  allBtn.textContent = texts.Todos; // 🎯 USA O TEXTO TRADUZIDO
   // O botão 'Todos' está ativo se activeCategoryFilters estiver vazio
   allBtn.className = activeCategoryFilters.size === 0 ? "filter-btn-active" : "filter-btn";
   allBtn.onclick = () => {
@@ -591,7 +697,7 @@ function rebuildCategoryOptions() {
 
   [...categoriesSet].sort().forEach(category => {
     const btn = document.createElement("button");
-    btn.textContent = category;
+    btn.textContent = texts[category] || category; // 🎯 USA O TEXTO TRADUZIDO DA CATEGORIA
     // 🎯 VERIFICAÇÃO SE A CATEGORIA ESTÁ ATIVA
     const isActive = activeCategoryFilters.has(category);
     btn.className = isActive ? "filter-btn-active" : "filter-btn";
@@ -616,6 +722,7 @@ function setCategoryFilter(category) {
 /* ----------------- RENDER/CONTROL SORT ----------------- */
 
 function renderSortFilters() {
+    const texts = textMap[currentLang]; // 🎯 PEGA O MAPA DE TEXTO
     const sortContainer = $("sortFilters");
     if (!sortContainer) return;
     
@@ -624,10 +731,12 @@ function renderSortFilters() {
     const titleBtn = $("sortByTitleBtn");
 
     if (dateBtn) {
+        dateBtn.textContent = texts.sort_date; // 🎯 TEXTO TRADUZIDO
         dateBtn.className = currentSortBy === "date" ? "filter-btn-active" : "filter-btn";
         dateBtn.onclick = () => setSortBy("date");
     }
     if (titleBtn) {
+        titleBtn.textContent = texts.sort_title; // 🎯 TEXTO TRADUZIDO
         titleBtn.className = currentSortBy === "title" ? "filter-btn-active" : "filter-btn";
         titleBtn.onclick = () => setSortBy("title");
     }
@@ -658,6 +767,8 @@ async function openAddModal() {
   $("addPosterUrl").value = "";
   resetPosterPreview(); // Limpa o poster ao abrir
   // $("addRating").value = ""; // <--- REMOVIDO
+  
+  tmpOriginalTitle = ""; // 🎯 LIMPA TÍTULO ORIGINAL
   
   $("addStreaming").value = userPreferences.defaultStreaming || "";
   $("addRemember").checked = !!(userPreferences.defaultStreaming);
@@ -709,7 +820,8 @@ async function handleAddConfirm() {
     streamingUrl: streamingUrlVal,
     remember,
     poster,
-    createdAt: Date.now()
+    createdAt: Date.now(),
+    originalTitle: tmpOriginalTitle || title // 🎯 ADICIONA TÍTULO ORIGINAL
   };
 
   try {
@@ -778,12 +890,13 @@ async function loadMovies() {
 // [CORREÇÃO] Esta é a função 'renderMovies' COMPLETA E CORRIGIDA
 function renderMovies() {
 
+  const texts = textMap[currentLang]; // 🎯 PEGA O MAPA DE TEXTO
+
   if (!movieGrid) return; 
 
   movieGrid.innerHTML = "";
 
   const term = (document.querySelector("#searchInput")?.value || "").toLowerCase();
-  // ❌ REMOVIDO: const filtro = activeCategoryFilter; (usaremos o Set)
   const isFilteringByCategories = activeCategoryFilters.size > 0;
 
   // 🎯 LÓGICA DE ORDENAÇÃO (APLICADA AQUI)
@@ -791,8 +904,9 @@ function renderMovies() {
 
   if (currentSortBy === "title") {
     sortedMovies.sort((a, b) => {
-      const titleA = (a.title || "").toLowerCase();
-      const titleB = (b.title || "").toLowerCase();
+      // 🎯 Ordenação por título precisa verificar qual título está ativo
+      const titleA = ((currentLang === 'en-US' ? a.originalTitle : a.title) || "").toLowerCase();
+      const titleB = ((currentLang === 'en-US' ? b.originalTitle : b.title) || "").toLowerCase();
       return titleA.localeCompare(titleB);
     });
   } else {
@@ -851,6 +965,11 @@ function renderMovies() {
     // Verifica se a URL de streaming existe e é válida
     const hasStreamingUrl = m.streamingUrl && (m.streamingUrl.startsWith('http://') || m.streamingUrl.startsWith('https://'));
     const posterImgHtml = `<img src="${m.poster}" class="poster-image" alt="${escapeHtml(m.title)}" onerror="this.style.opacity='.3'" />`;
+    
+    // 🎯 Título exibido: Se for EN-US, usa o originalTitle; se não tiver, usa o title.
+    const displayTitle = escapeHtml(
+        (currentLang === 'en-US' && m.originalTitle) ? m.originalTitle : m.title
+    );
 
     card.innerHTML += `
       ${hasStreamingUrl 
@@ -860,12 +979,12 @@ function renderMovies() {
 
       <div class="poster-info">
         <div>
-          <div class="poster-title">${escapeHtml(m.title)}</div>
+          <div class="poster-title">${displayTitle}</div> 
           <div class="poster-description">${escapeHtml(desc)}</div>
         </div>
 
         <div class="mt-3 flex justify-between items-center">
-          <button class="read-more-btn">Leia mais</button>
+          <button class="read-more-btn">${texts.read_more}</button>
           
           <div class="actions-menu">
             <button class="actions-menu-btn">...</button>
@@ -996,7 +1115,12 @@ function openMainModal(movie, editable = false) {
   }
 
   modalPoster.src = movie.poster || "";
-  modalTitle.textContent = movie.title || "";
+  
+  // 🎯 TÍTULO DO MODAL: Se for EN-US, usa o originalTitle
+  modalTitle.textContent = (currentLang === 'en-US' && movie.originalTitle) 
+                           ? movie.originalTitle 
+                           : movie.title || "";
+  
   modalSinopse.value = movie.description || "";
   modalSinopse.dataset.lang = 'pt-BR'; // Reseta o idioma para o padrão
   // modalRating.value = movie.rating ?? ""; // <--- REMOVIDO
@@ -1010,10 +1134,12 @@ function openMainModal(movie, editable = false) {
 
   // Popula as pills de categoria (modo visualização)
   modalCategories.innerHTML = "";
+  // 🎯 Traduzindo Pills
+  const categoryTexts = textMap[currentLang];
   (movie.categories || []).forEach(c => {
     const x = document.createElement("span");
     x.className = "px-2 py-1 bg-neutral-700 rounded text-sm mr-2";
-    x.textContent = c;
+    x.textContent = categoryTexts[c] || c;
     modalCategories.appendChild(x);
   });
 
@@ -1027,7 +1153,7 @@ function openMainModal(movie, editable = false) {
       <input type="checkbox" value="${c}" ${
       (movie.categories || []).includes(c) ? "checked" : ""
     } />
-      <span class="text-sm">${c}</span>
+      <span class="text-sm">${categoryTexts[c] || c}</span>
     `;
     modalCategorySelectContainer.appendChild(lbl);
   });
@@ -1050,17 +1176,29 @@ async function saveModalChanges() {
   // 🎯 Pega a URL do novo input de texto, se existir.
   const newPosterUrl = modalPosterUrl ? modalPosterUrl.value.trim() : modalPoster.src || "";
   
+  const newTitle = modalTitle.textContent.trim(); 
+  const movieToUpdate = movies.find(m => m.id === editingId);
+  
+  // 🎯 Lógica para salvar o Título Original:
+  // Se o idioma ATUAL for EN-US, o que o usuário vê é o Título Original (newTitle).
+  // Se o idioma for PT-BR, o Título Original deve ser mantido se já existir, senão usa o newTitle.
+  const originalTitleToSave = (currentLang === 'en-US') 
+                              ? newTitle 
+                              : (movieToUpdate.originalTitle || movieToUpdate.title);
+  
   try {
     const ref = doc(db, "users", userId, "movies", editingId);
 
     const updated = {
-      title: modalTitle.textContent.trim(),
+      // 🎯 Salva o título no campo 'title' (o campo primário)
+      title: newTitle, 
       description: modalSinopse.value.trim(),
       categories: cats,
       // rating: modalRating.value ? Number(modalRating.value) : null, // <--- REMOVIDO
       streamingUrl: modalStreaming.value || null,
       remember: rememberStreaming.checked,
-      poster: newPosterUrl 
+      poster: newPosterUrl,
+      originalTitle: originalTitleToSave // 🎯 SALVA O ORIGINAL TITLE
     };
 
     await updateDoc(ref, updated);
@@ -1110,12 +1248,20 @@ async function handleEditFetchPoster() {
   }
 
   const movieId = searchResults[0].id;
-  const movieDetails = await fetchMovieDetailsTMDb(movieId);
+  // 🎯 Busca com o idioma ativo
+  const movieDetails = await fetchMovieDetailsTMDb(movieId, currentLang); 
   
   const posterUrl = movieDetails.poster_path ? `${TMDB_IMG_BASE_URL}${movieDetails.poster_path}` : '';
 
   if (movieDetails) {
-    modalTitle.textContent = movieDetails.title_pt_BR || movieDetails.title || "";
+    // 🎯 TÍTULO PRIMÁRIO para o campo 'title' do Firebase
+    const apiTitle = movieDetails.title || movieDetails.original_title || "";
+    
+    // 🎯 SALVA O TÍTULO ORIGINAL, se existir, senão usa o traduzido
+    tmpOriginalTitle = movieDetails.original_title || apiTitle;
+
+    // Preenche o título com o nome oficial (em PT-BR, se houver)
+    modalTitle.textContent = apiTitle; 
     modalSinopse.value = movieDetails.overview || "Sinopse não disponível.";
     
     modalPoster.src = posterUrl;
@@ -1129,13 +1275,14 @@ async function handleEditFetchPoster() {
     rebuildCategoryOptions(); // Atualiza os filtros globais
 
     // Atualiza as categorias no modal de edição
+    const categoryTexts = textMap[currentLang];
     modalCategorySelectContainer.innerHTML = "";
     [...categoriesSet].sort().forEach(c => {
         const lbl = document.createElement("label");
         lbl.className = "flex items-center gap-2 cursor-pointer px-2 py-1 bg-neutral-700 rounded mr-2 mb-2 edit-element-flex";
         lbl.innerHTML = `
         <input type="checkbox" value="${c}" ${newCategories.includes(c) ? "checked" : ""} />
-        <span class="text-sm">${c}</span>
+        <span class="text-sm">${categoryTexts[c] || c}</span>
         `;
         modalCategorySelectContainer.appendChild(lbl);
     });
@@ -1208,7 +1355,7 @@ function attachGlobalEvents() {
   // 🎯 CRIA O BOTÃO FLUTUANTE DE EXCLUSÃO
   deleteSelectedBtn = document.createElement('button');
   deleteSelectedBtn.id = 'deleteSelectedBtn';
-  deleteSelectedBtn.textContent = 'Excluir Selecionados (0)';
+  deleteSelectedBtn.textContent = textMap[currentLang].delete_selected + " (0)";
   deleteSelectedBtn.className = 'fixed bottom-6 left-6 bg-red-700 text-white px-5 py-3 rounded-full shadow-xl hover:scale-105 hidden z-40';
   deleteSelectedBtn.onclick = deleteSelectedMoviesConfirm;
   document.body.appendChild(deleteSelectedBtn);
@@ -1218,6 +1365,12 @@ function attachGlobalEvents() {
       modalPosterUrl.oninput = (e) => {
           modalPoster.src = e.target.value;
       };
+  }
+  
+  // 🎯 EVENTO DE MUDANÇA DE IDIOMA
+  const langBtn = $("toggleLanguageBtn");
+  if (langBtn) {
+    langBtn.onclick = toggleLanguage;
   }
 
   // [CORREÇÃO] Adiciona evento para o 'X' do modal principal
@@ -1391,15 +1544,16 @@ function toggleMultiSelectMode() {
     multiSelectMode = !multiSelectMode;
     selectedMovies.clear();
     
+    const texts = textMap[currentLang];
     const toggleBtn = $("toggleSelectModeBtn");
     
     if (multiSelectMode) {
-        toggleBtn.textContent = 'Cancelar Seleção';
+        toggleBtn.textContent = texts.select_toggle_on;
         toggleBtn.className = 'px-3 py-2 bg-red-600 text-white rounded flex-shrink-0';
         $("addMovieFab").classList.add('hidden'); // Esconde o FAB de adição
         deleteSelectedBtn.classList.remove('hidden'); // Mostra o botão de exclusão
     } else {
-        toggleBtn.textContent = 'Selecionar';
+        toggleBtn.textContent = texts.select_toggle_off;
         toggleBtn.className = 'px-3 py-2 bg-neutral-700 text-white rounded flex-shrink-0';
         $("addMovieFab").classList.remove('hidden'); // Mostra o FAB de adição
         deleteSelectedBtn.classList.add('hidden'); // Esconde o botão de exclusão
@@ -1413,7 +1567,8 @@ function toggleMultiSelectMode() {
  * Atualiza o texto e estado (disabled) do botão de exclusão múltipla.
  */
 function updateDeleteSelectedButton() {
-    deleteSelectedBtn.textContent = `Excluir Selecionados (${selectedMovies.size})`;
+    const texts = textMap[currentLang];
+    deleteSelectedBtn.textContent = `${texts.delete_selected} (${selectedMovies.size})`;
     deleteSelectedBtn.disabled = selectedMovies.size === 0;
 }
 
