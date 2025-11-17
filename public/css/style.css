@@ -321,3 +321,16 @@
   display: block;
   line-height: 0; /* Remove espaço extra do <a> */
 }
+/* =============================== */
+/* 🌐 BOTÃO DE LINGUAGEM */
+/* =============================== */
+
+.lang-btn {
+  /* Estilo base igual ao filter-btn */
+  transition: all .2s ease;
+  font-weight: bold;
+}
+
+.lang-btn:hover {
+  background-color: #52525b; /* bg-neutral-600 */
+}
