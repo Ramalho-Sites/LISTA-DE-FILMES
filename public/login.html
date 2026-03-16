@@ -4,36 +4,22 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Login - Lista de Filmes</title>
-
-  <!-- Fonte e Ícones -->
   <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet"/>
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet"/>
-
-  <!-- CSS Principal -->
   <link rel="stylesheet" href="css/style.css" />
-
   <style>
-    /* container animado */
     .login-container {
       opacity: 0;
       transform: translateY(30px);
       animation: fadeSlideIn 0.8s ease-out forwards;
     }
-
     @keyframes fadeSlideIn {
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
+      to { opacity: 1; transform: translateY(0); }
     }
-
-    /* titulo verde */
     .login-container h1 {
       color: #4caf50;
       margin-bottom: 25px;
     }
-
-    /* link de esqueci senha */
     #forgotPasswordLink {
       margin-top: 12px;
       display: inline-block;
@@ -45,26 +31,74 @@
     #forgotPasswordLink:hover {
       color: #81c784;
     }
+
+    /* Campo de senha com botão de mostrar */
+    .password-wrapper {
+      position: relative;
+      width: 100%;
+      margin: 12px 0;
+    }
+    .password-wrapper input {
+      width: 100%;
+      padding-right: 44px;
+      box-sizing: border-box;
+      margin: 0 !important;
+    }
+    #togglePassword {
+      position: absolute !important;
+      right: 14px !important;
+      top: 50% !important;
+      transform: translateY(-50%) !important;
+      background: none !important;
+      border: none !important;
+      cursor: pointer !important;
+      color: #888 !important;
+      font-size: 1rem !important;
+      padding: 0 !important;
+      width: auto !important;
+      height: auto !important;
+      margin: 0 !important;
+      line-height: 1 !important;
+      transition: color 0.2s !important;
+    }
+    #togglePassword:hover {
+      color: #4caf50 !important;
+    }
   </style>
 </head>
-
 <body class="login-body">
-
   <div class="login-container">
     <h1>🎬 Minha Lista de Filmes</h1>
 
     <input type="email" id="email" placeholder="E-mail" required />
-    <input type="password" id="password" placeholder="Senha" required />
+
+    <!-- Campo de senha com botão de mostrar/ocultar -->
+    <div class="password-wrapper">
+      <input type="password" id="password" placeholder="Senha" required />
+      <button type="button" class="toggle-password" id="togglePassword" title="Mostrar/ocultar senha">
+        <i class="fas fa-eye" id="toggleIcon"></i>
+      </button>
+    </div>
 
     <button id="loginBtn">Entrar / Criar Conta</button>
     <button id="googleBtn">Entrar com Google</button>
-
     <p id="forgotPasswordLink">Esqueci minha senha</p>
   </div>
 
-  <!-- Firebase + Auth -->
-<!-- Firebase -->
-<script type="module" src="js/firebase-config.js"></script>
+  <script type="module" src="js/firebase-config.js"></script>
   <script type="module" src="js/auth.js"></script>
+
+  <script>
+    // Botão mostrar/ocultar senha
+    const togglePassword = document.getElementById("togglePassword");
+    const passwordInput  = document.getElementById("password");
+    const toggleIcon     = document.getElementById("toggleIcon");
+
+    togglePassword.addEventListener("click", () => {
+      const isHidden = passwordInput.type === "password";
+      passwordInput.type = isHidden ? "text" : "password";
+      toggleIcon.className = isHidden ? "fas fa-eye-slash" : "fas fa-eye";
+    });
+  </script>
 </body>
 </html>

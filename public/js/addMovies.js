@@ -2,8 +2,6 @@
 /* eslint-disable no-unused-vars */
 
 import { auth, db } from "./firebase-config.js";
-// [MUDANÇA 1] Importar o 'signOut' para fazer o logout
-// CORREÇÃO: Usamos uma versão mais estável para o módulo Auth/Pop-up.
 import { signOut } from "https://www.gstatic.com/firebasejs/9.6.11/firebase-auth.js";
 import {
   collection,
@@ -13,12 +11,10 @@ import {
   deleteDoc,
   doc,
   query,
-  // ❌ REMOVIDO: orderBy (a ordenação é feita no lado do cliente para flexibilidade)
   getDoc,
   setDoc
 } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-// [CORREÇÃO FINAL] Declaramos as variáveis aqui, mas sem valor.
 let logoutBtn;
 let movieGrid;
 let mainModal;
@@ -39,39 +35,58 @@ let modalUploadBtn;
 let modalUploadInput;
 let modalRemovePoster;
 let toastEl;
-let btnTranslateSinopse; 
+let btnTranslateSinopse;
 
-// 🎯 NOVAS VARIÁVEIS PARA O MODAL CUSTOMIZADO
 let confirmDialog;
 let confirmTitle;
 let confirmMessage;
 let confirmOKBtn;
 let confirmCancelBtn;
-let modalPosterUrl; // Input de URL de pôster no modal principal
+let modalPosterUrl;
 
 // ==================================================
-// 💎 CONFIGURAÇÕES DA NOVA API (TMDb) 💎
+// 💎 CONFIGURAÇÕES DA API TMDb 💎
 // ==================================================
-// [MUDANÇA] Nova Chave de API
-const TMDB_API_KEY = "fc5a1abc31f9c3ba52d39c83b6892956"; 
-const TMDB_IMG_BASE_URL = "https://image.tmdb.org/t/p/w500"; // Base para pôsteres
-const TMDB_LANGUAGE = "pt-BR"; // BUSCAR EM PORTUGUÊS!
+const TMDB_API_KEY = "fc5a1abc31f9c3ba52d39c83b6892956";
+const TMDB_IMG_BASE_URL = "https://image.tmdb.org/t/p/w500";
+const TMDB_LANGUAGE = "pt-BR";
 let genreMap = new Map();
-// ==================================================
 
+// ==================================================
+// 🎬 PLAYERS — FILMES (melhor → pior)
+// ==================================================
+const PLAYERS_MOVIE = [
+  { name: "EmbedAPI",   url: (id) => `https://player.embed-api.stream/?id=${id}` },
+  { name: "MultiEmbed", url: (id) => `https://multiembed.mov/?video_id=${id}&tmdb=1` },
+  { name: "VidSrc",     url: (id) => `https://vidsrc.me/embed/movie?tmdb=${id}` },
+  { name: "AutoEmbed",  url: (id) => `https://player.autoembed.cc/embed/movie/${id}` },
+  { name: "VidKing",    url: (id) => `https://www.vidking.net/embed/movie/${id}` },
+];
+
+// ==================================================
+// 🎬 PLAYERS — SÉRIES (melhor → pior)
+// ==================================================
+const PLAYERS_SERIES = [
+  { name: "EmbedAPI",   url: (id, s, e) => `https://player.embed-api.stream/?id=${id}&s=${s}&e=${e}` },
+  { name: "VidSrc",     url: (id, s, e) => `https://vidsrc.me/embed/tv?tmdb=${id}&season=${s}&episode=${e}` },
+  { name: "MultiEmbed", url: (id, s, e) => `https://multiembed.mov/?video_id=${id}&tmdb=1&s=${s}&e=${e}` },
+  { name: "AutoEmbed",  url: (id, s, e) => `https://player.autoembed.cc/embed/tv/${id}/${s}/${e}` },
+];
+
+// Tipo de mídia: "movie" ou "tv"
+let currentMediaType = "movie";
 
 /* ------------------------- HELPERS ------------------------- */
 const $ = id => document.getElementById(id);
 
 function showToast(msg, type = "info") {
-  // Inicializa o toastEl na primeira vez que for usado
   if (!toastEl) {
     toastEl = $("toast");
     if (!toastEl) {
-        toastEl = document.createElement("div");
-        toastEl.id = "toast";
-        toastEl.className = "toast";
-        document.body.appendChild(toastEl);
+      toastEl = document.createElement("div");
+      toastEl.id = "toast";
+      toastEl.className = "toast";
+      document.body.appendChild(toastEl);
     }
   }
   toastEl.textContent = msg;
@@ -95,13 +110,12 @@ function escapeHtml(s) {
     .replaceAll(">", "&gt;");
 }
 
-// [MELHORIA 5] Nova função: Busca por termos (lista de filmes) NA TMDb
 async function searchMoviesTMDb(term, lang = TMDB_LANGUAGE) {
   try {
     const url = `https://api.themoviedb.org/3/search/movie?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(term)}&language=${lang}&page=1`;
     const resp = await fetch(url);
     const data = await resp.json();
-    if (data?.results && data.results.length > 0) return data.results; // Retorna uma array de filmes
+    if (data?.results && data.results.length > 0) return data.results;
     return [];
   } catch (e) {
     console.error("Erro ao buscar sugestões:", e);
@@ -109,8 +123,21 @@ async function searchMoviesTMDb(term, lang = TMDB_LANGUAGE) {
   }
 }
 
-// [MELHORIA 5] Nova função: Busca detalhes de um filme específico NA TMDb
-async function fetchMovieDetailsTMDb(movieId, lang = TMDB_LANGUAGE) { // <-- Aceita 'lang'
+// 📺 Busca séries na TMDB
+async function searchTVTMDb(term, lang = TMDB_LANGUAGE) {
+  try {
+    const url = `https://api.themoviedb.org/3/search/tv?api_key=${TMDB_API_KEY}&query=${encodeURIComponent(term)}&language=${lang}&page=1`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (data?.results && data.results.length > 0) return data.results;
+    return [];
+  } catch (e) {
+    console.error("Erro ao buscar séries:", e);
+    return [];
+  }
+}
+
+async function fetchMovieDetailsTMDb(movieId, lang = TMDB_LANGUAGE) {
   try {
     const url = `https://api.themoviedb.org/3/movie/${movieId}?api_key=${TMDB_API_KEY}&language=${lang}`;
     const resp = await fetch(url);
@@ -123,22 +150,34 @@ async function fetchMovieDetailsTMDb(movieId, lang = TMDB_LANGUAGE) { // <-- Ace
   }
 }
 
-// [MELHORIA 5] Nova função: Carrega a lista de gêneros da TMDb
-async function loadGenresTMDb() {
-    try {
-        const url = `https://api.themoviedb.org/3/genre/movie/list?api_key=${TMDB_API_KEY}&language=${TMDB_LANGUAGE}`;
-        const resp = await fetch(url);
-        const data = await resp.json();
-        if (data?.genres) {
-            data.genres.forEach(genre => {
-                genreMap.set(genre.id, genre.name); // Mapeia ID -> Nome (ex: 28 -> "Ação")
-            });
-        }
-    } catch (e) {
-        console.error("Erro ao carregar gêneros:", e);
-    }
+// 📺 Busca detalhes de série na TMDB
+async function fetchTVDetailsTMDb(tvId, lang = TMDB_LANGUAGE) {
+  try {
+    const url = `https://api.themoviedb.org/3/tv/${tvId}?api_key=${TMDB_API_KEY}&language=${lang}`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (data?.id) return data;
+    return null;
+  } catch (e) {
+    console.error("Erro ao buscar detalhes da série:", e);
+    return null;
+  }
 }
 
+async function loadGenresTMDb() {
+  try {
+    const url = `https://api.themoviedb.org/3/genre/movie/list?api_key=${TMDB_API_KEY}&language=${TMDB_LANGUAGE}`;
+    const resp = await fetch(url);
+    const data = await resp.json();
+    if (data?.genres) {
+      data.genres.forEach(genre => {
+        genreMap.set(genre.id, genre.name);
+      });
+    }
+  } catch (e) {
+    console.error("Erro ao carregar gêneros:", e);
+  }
+}
 
 function fileToDataURL(file) {
   return new Promise((res, rej) => {
@@ -153,7 +192,6 @@ function fileToDataURL(file) {
 let userId = null;
 let movies = [];
 let editingId = null;
-// ❌ REMOVIDO: activeCategoryFilter = "";
 let userPreferences = {};
 let categoriesSet = new Set([
   "Ação", "Terror", "Comédia", "Romance", "Fantasia",
@@ -161,74 +199,73 @@ let categoriesSet = new Set([
 ]);
 let tmpPosterDataUrl = "";
 let tmpPosterUrl = "";
-// 🎯 VARIÁVEIS DE ESTADO
 let multiSelectMode = false;
-let selectedMovies = new Set(); 
+let selectedMovies = new Set();
 let deleteSelectedBtn;
-let currentSortBy = "date"; // 'date' (Mais Recentes) ou 'title' (A-Z)
-// 🎯 NOVO ESTADO: Filtro Múltiplo de Categoria
+let currentSortBy = "date";
 let activeCategoryFilters = new Set();
-// 🎯 NOVO ESTADO DE IDIOMA
-let currentLang = "pt-BR"; // 'pt-BR' ou 'en-US'
-// 🎯 VARIÁVEL TEMPORÁRIA PARA O TÍTULO ORIGINAL (usado na Adição)
-let tmpOriginalTitle = ""; 
+let currentLang = "pt-BR";
+let tmpOriginalTitle = "";
+let tmpTmdbId = "";
+let currentPlayerIndex = 0;
+let playingTmdbId = "";
+let playingSeason  = 1;
+let playingEpisode = 1;
 
+// ❤️ FAVORITOS: controla se o filtro de favoritos está ativo
+let showOnlyFavorites = false;
+// 📺 Tipo de mídia sendo adicionado no modal de adição
+let addMediaType = "movie";
 
-// 🎯 MAPA DE TRADUÇÃO DO SITE (UI TEXTS)
 const textMap = {
-    "pt-BR": {
-        brand: "Meus Filmes",
-        select_toggle_off: "Selecionar",
-        select_toggle_on: "Cancelar Seleção",
-        delete_selected: "Excluir Selecionados",
-        sort_by: "Ordenar por:",
-        sort_date: "Mais Recentes",
-        sort_title: "Título (A-Z)",
-        logout: "Sair",
-        read_more: "Leia mais",
-        // Tradução literal de CATEGORIAS (Filtros)
-        "Ação": "Ação", "Terror": "Terror", "Comédia": "Comédia", "Romance": "Romance", 
-        "Fantasia": "Fantasia", "Thriller": "Thriller", "Suspense": "Suspense", 
-        "Drama": "Drama", "Ficção Científica": "Ficção Científica",
-        "Todos": "Todos"
-    },
-    "en-US": {
-        brand: "My Watchlist",
-        select_toggle_off: "Select",
-        select_toggle_on: "Cancel Selection",
-        delete_selected: "Delete Selected",
-        sort_by: "Sort by:",
-        sort_date: "Most Recent",
-        sort_title: "Title (A-Z)",
-        logout: "Logout",
-        read_more: "Read more",
-        // Tradução literal de CATEGORIAS (Filtros)
-        "Ação": "Action", "Terror": "Horror", "Comédia": "Comedy", "Romance": "Romance", 
-        "Fantasia": "Fantasy", "Thriller": "Thriller", "Suspense": "Suspense", 
-        "Drama": "Drama", "Ficção Científica": "Science Fiction",
-        "Todos": "All"
-    }
+  "pt-BR": {
+    brand: "Meus Filmes",
+    select_toggle_off: "Selecionar",
+    select_toggle_on: "Cancelar Seleção",
+    delete_selected: "Excluir Selecionados",
+    sort_by: "Ordenar por:",
+    sort_date: "Mais Recentes",
+    sort_title: "Título (A-Z)",
+    logout: "Sair",
+    read_more: "Leia mais",
+    favorites_filter: "❤️ Favoritos",
+    favorites_filter_active: "❤️ Favoritos",
+    "Ação": "Ação", "Terror": "Terror", "Comédia": "Comédia", "Romance": "Romance",
+    "Fantasia": "Fantasia", "Thriller": "Thriller", "Suspense": "Suspense",
+    "Drama": "Drama", "Ficção Científica": "Ficção Científica",
+    "Todos": "Todos"
+  },
+  "en-US": {
+    brand: "My Watchlist",
+    select_toggle_off: "Select",
+    select_toggle_on: "Cancel Selection",
+    delete_selected: "Delete Selected",
+    sort_by: "Sort by:",
+    sort_date: "Most Recent",
+    sort_title: "Title (A-Z)",
+    logout: "Logout",
+    read_more: "Read more",
+    favorites_filter: "❤️ Favorites",
+    favorites_filter_active: "❤️ Favorites",
+    "Ação": "Action", "Terror": "Horror", "Comédia": "Comedy", "Romance": "Romance",
+    "Fantasia": "Fantasy", "Thriller": "Thriller", "Suspense": "Suspense",
+    "Drama": "Drama", "Ficção Científica": "Science Fiction",
+    "Todos": "All"
+  }
 };
 
-
 /* ------------------------- AUTH ------------------------- */
-// Este é o PONTO DE ENTRADA. Fica no topo.
 auth.onAuthStateChanged(async user => {
   if (!user) {
     window.location.href = "login.html";
     return;
   }
   userId = user.uid;
-  // Agora podemos inicializar o app, pois o HTML já carregou e o usuário existe.
   await initApp();
 });
 
 /* ------------------------- INITIALIZATION ------------------------- */
-
 async function initApp() {
-  
-  // [CORREÇÃO FINAL] Atribuímos os elementos do DOM AQUI!
-  // Agora é 100% seguro, pois o HTML já carregou.
   logoutBtn = $("logoutBtn");
   movieGrid = $("movieGrid");
   mainModal = $("modal");
@@ -248,28 +285,23 @@ async function initApp() {
   modalUploadBtn = $("modalUploadBtn");
   modalUploadInput = $("modalUploadInput");
   modalRemovePoster = $("modalRemovePoster");
-  toastEl = $("toast"); // Garante que o toast seja pego
-  btnTranslateSinopse = $("btnTranslateSinopse"); 
-  
-  // 🎯 ATRIBUIÇÃO DOS ELEMENTOS DE EDIÇÃO DE URL E MODAL CUSTOMIZADO
+  toastEl = $("toast");
+  btnTranslateSinopse = $("btnTranslateSinopse");
   modalPosterUrl = $("modalPosterUrl");
   confirmDialog = $("confirmDialog");
   confirmTitle = $("confirmTitle");
   confirmMessage = $("confirmMessage");
   confirmOKBtn = $("confirmOKBtn");
   confirmCancelBtn = $("confirmCancelBtn");
-  
-  // O resto da inicialização...
-  await loadGenresTMDb(); // Carrega os nomes dos gêneros
+
+  await loadGenresTMDb();
   await loadUserPreferences();
-  buildAddMovieUI(); // Agora vai funcionar
+  buildAddMovieUI();
+  createPlayerModal();
   await loadMovies();
-  
-  // 🎯 CHAMA A FUNÇÃO DE LOCALIZAÇÃO INICIAL
-  applyLocalization(); 
-  
-  rebuildCategoryOptions(); // Agora vai funcionar
-  renderSortFilters(); // Renderiza os botões de ordenação e define o estado inicial
+  applyLocalization();
+  rebuildCategoryOptions();
+  renderSortFilters();
   attachGlobalEvents();
 }
 
@@ -277,7 +309,6 @@ async function loadUserPreferences() {
   if (!userId) return;
   const prefRef = doc(db, "users", userId, "preferences", "main");
   const docSnap = await getDoc(prefRef);
-
   if (docSnap.exists()) {
     userPreferences = docSnap.data();
   } else {
@@ -297,11 +328,276 @@ async function saveUserPreferences() {
 }
 
 /* ============================================================
-      CRIA BOTÃO E MODAL DE ADIÇÃO (FIQUEM TRANQUILO)
+   [PLAYER] MODAL DE REPRODUÇÃO COM FALLBACK
+============================================================ */
+function createPlayerModal() {
+  if ($("playerModal")) return;
+
+  const modal = document.createElement("div");
+  modal.id = "playerModal";
+  modal.style.cssText = `
+    display: none;
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.92);
+    z-index: 99999;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+  `;
+
+  modal.innerHTML = `
+    <div style="
+      position: relative;
+      width: 92%;
+      max-width: 1000px;
+      background: #111;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 0 40px rgba(0,0,0,0.8);
+    ">
+      <div style="
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 16px;
+        background: #1a1a1a;
+        border-bottom: 1px solid #333;
+      ">
+        <span id="playerTitle" style="color:#fff; font-weight:bold; font-size:15px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:60%;"></span>
+        <button id="playerCloseBtn" style="
+          background: #e53e3e; color: white; border: none; border-radius: 6px;
+          padding: 5px 14px; cursor: pointer; font-size: 14px; font-weight: bold;
+        ">✕ Fechar</button>
+      </div>
+      <div style="position:relative; width:100%; aspect-ratio:16/9; background:#000;">
+        <iframe id="playerIframe"
+          style="width:100%; height:100%; border:none; display:block;"
+          allowfullscreen
+          allow="autoplay; encrypted-media; fullscreen; picture-in-picture"
+          referrerpolicy="no-referrer"
+          sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"
+        ></iframe>
+        <div id="playerSpinner" style="
+          position:absolute; top:50%; left:50%;
+          transform:translate(-50%,-50%);
+          color:#aaa; font-size:14px; pointer-events:none;
+        ">Carregando player...</div>
+      </div>
+      <div id="playerEpisodeRow" style="
+        display: none; align-items: center; gap: 10px;
+        padding: 8px 16px; background: #141414;
+        border-top: 1px solid #222; flex-wrap: wrap;
+      ">
+        <span style="color:#aaa; font-size:13px;">Temporada:</span>
+        <input id="playerSeasonInput" type="number" min="1" value="1" style="
+          width:60px; padding:3px 6px; border-radius:5px;
+          background:#222; color:#fff; border:1px solid #444; font-size:13px;
+        " />
+        <span style="color:#aaa; font-size:13px;">Episódio:</span>
+        <input id="playerEpisodeInput" type="number" min="1" value="1" style="
+          width:60px; padding:3px 6px; border-radius:5px;
+          background:#222; color:#fff; border:1px solid #444; font-size:13px;
+        " />
+        <button onclick="window.__loadEpisode()" style="
+          padding:4px 14px; border-radius:6px; border:none;
+          background:#4f46e5; color:#fff; font-size:12px;
+          font-weight:bold; cursor:pointer;
+        ">▶ Ir</button>
+      </div>
+      <div style="
+        display: flex; align-items: center; gap: 8px;
+        padding: 10px 16px; background: #1a1a1a;
+        flex-wrap: wrap; border-top: 1px solid #333;
+      ">
+        <span style="color:#aaa; font-size:13px; margin-right:4px;">Trocar servidor:</span>
+        <div id="playerServerBtns" style="display:flex; gap:6px; flex-wrap:wrap;"></div>
+        <span id="playerServerLabel" style="color:#666; font-size:12px; margin-left:auto;"></span>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+  modal.addEventListener("click", (e) => { if (e.target === modal) closePlayerModal(); });
+  modal.querySelector("#playerCloseBtn").addEventListener("click", closePlayerModal);
+}
+
+async function openPlayerModal(movie) {
+  const modal = $("playerModal");
+  if (!modal) return;
+
+  let tmdbId = movie.tmdbId || "";
+  if (!tmdbId) {
+    const isTV = movie.mediaType === "tv";
+    showToast(isTV ? "Buscando série na base de dados..." : "Buscando filme na base de dados...");
+    const results = isTV
+      ? await searchTVTMDb(movie.title)
+      : await searchMoviesTMDb(movie.title);
+    if (results && results.length > 0) tmdbId = String(results[0].id);
+  }
+  if (!tmdbId) {
+    showToast("Não foi possível encontrar este filme para reproduzir.", "warning");
+    return;
+  }
+
+  playingTmdbId = tmdbId;
+  currentPlayerIndex = 0;
+  currentMediaType = movie.mediaType || "movie";
+  playingSeason  = 1;
+  playingEpisode = 1;
+
+  const epRow = $("playerEpisodeRow");
+  if (epRow) epRow.style.display = currentMediaType === "tv" ? "flex" : "none";
+
+  const titleEl = $("playerTitle");
+  if (titleEl) titleEl.textContent = movie.title || "";
+
+  buildServerButtons(tmdbId);
+  loadPlayer(tmdbId, 0);
+  modal.style.display = "flex";
+  document.body.style.overflow = "hidden";
+}
+
+window.__loadEpisode = function() {
+  const s = parseInt($("playerSeasonInput")?.value) || 1;
+  const e = parseInt($("playerEpisodeInput")?.value) || 1;
+  playingSeason  = s;
+  playingEpisode = e;
+  if (playingTmdbId) loadPlayer(playingTmdbId, 0);
+};
+
+function closePlayerModal() {
+  const modal = $("playerModal");
+  if (!modal) return;
+  const iframe = $("playerIframe");
+  if (iframe) iframe.src = "about:blank";
+  modal.style.display = "none";
+  document.body.style.overflow = "";
+  playingTmdbId = "";
+  currentPlayerIndex = 0;
+  currentMediaType = "movie";
+  playingSeason    = 1;
+  playingEpisode   = 1;
+  const epRow = $("playerEpisodeRow");
+  if (epRow) epRow.style.display = "none";
+}
+
+function loadPlayer(tmdbId, index) {
+  const iframe = $("playerIframe");
+  const spinner = $("playerSpinner");
+  const label = $("playerServerLabel");
+  if (!iframe) return;
+
+  currentPlayerIndex = index;
+  const activeList = currentMediaType === "tv" ? PLAYERS_SERIES : PLAYERS_MOVIE;
+  const player = activeList[index];
+
+  if (spinner) spinner.style.display = "block";
+  iframe.src = "about:blank";
+
+  setTimeout(() => {
+    const season  = playingSeason  || 1;
+    const episode = playingEpisode || 1;
+    iframe.src = currentMediaType === "tv"
+      ? player.url(tmdbId, season, episode)
+      : player.url(tmdbId);
+    if (label) label.textContent = player.name;
+    if (spinner) setTimeout(() => { spinner.style.display = "none"; }, 2000);
+  }, 150);
+
+  updateServerButtonsState(index);
+}
+
+function buildServerButtons(tmdbId) {
+  const container = $("playerServerBtns");
+  if (!container) return;
+  container.innerHTML = "";
+
+  const activeList = currentMediaType === "tv" ? PLAYERS_SERIES : PLAYERS_MOVIE;
+  activeList.forEach((player, index) => {
+    const btn = document.createElement("button");
+    btn.textContent = player.name;
+    btn.dataset.index = index;
+    btn.style.cssText = `
+      padding: 4px 12px; border-radius: 6px; border: none;
+      cursor: pointer; font-size: 12px; font-weight: bold; transition: background 0.2s;
+    `;
+    btn.onclick = () => loadPlayer(tmdbId, index);
+    container.appendChild(btn);
+  });
+  updateServerButtonsState(0);
+}
+
+function updateServerButtonsState(activeIndex) {
+  const container = $("playerServerBtns");
+  if (!container) return;
+  Array.from(container.children).forEach((btn, i) => {
+    btn.style.background = i === activeIndex ? "#4f46e5" : "#333";
+    btn.style.color      = i === activeIndex ? "#fff"    : "#ccc";
+  });
+}
+
+/* ============================================================
+   ❤️ FAVORITOS
 ============================================================ */
 
+/**
+ * Alterna o favorito de um filme no Firestore e atualiza o estado local.
+ * @param {string} movieId
+ * @param {boolean} currentFav - valor atual do favorito
+ */
+async function toggleFavorite(movieId, currentFav) {
+  if (!userId || !movieId) return;
+
+  const newFav = !currentFav;
+
+  // Atualiza localmente de imediato (UI otimista)
+  const movie = movies.find(m => m.id === movieId);
+  if (movie) movie.favorite = newFav;
+
+  // Persiste no Firestore
+  try {
+    const ref = doc(db, "users", userId, "movies", movieId);
+    await updateDoc(ref, { favorite: newFav });
+  } catch (e) {
+    console.error("Erro ao atualizar favorito:", e);
+    // Reverte em caso de erro
+    if (movie) movie.favorite = currentFav;
+    showToast("Erro ao atualizar favorito", "error");
+  }
+
+  // Re-renderiza só os cards (sem buscar do Firestore de novo)
+  renderMovies();
+}
+
+/**
+ * Cria o botão de coração para um card.
+ * @param {object} movie
+ * @returns {HTMLButtonElement}
+ */
+function createFavoriteBtn(movie) {
+  const btn = document.createElement("button");
+  btn.className = "fav-btn";
+  btn.setAttribute("aria-label", movie.favorite ? "Remover dos favoritos" : "Adicionar aos favoritos");
+  btn.setAttribute("title", movie.favorite ? "Remover dos favoritos" : "Adicionar aos favoritos");
+  btn.innerHTML = movie.favorite ? "❤️" : "🤍";
+  btn.dataset.movieId = movie.id;
+
+  btn.onclick = async (e) => {
+    e.stopPropagation(); // Não dispara o click do card
+    btn.disabled = true; // Evita cliques duplos
+    await toggleFavorite(movie.id, movie.favorite || false);
+    btn.disabled = false;
+  };
+
+  return btn;
+}
+
+/* ============================================================
+      CRIA BOTÃO E MODAL DE ADIÇÃO
+============================================================ */
 function buildAddMovieUI() {
-  // FAB BUTTON
   if (!$("addMovieFab")) {
     const fab = document.createElement("button");
     fab.id = "addMovieFab";
@@ -312,9 +608,7 @@ function buildAddMovieUI() {
     document.body.appendChild(fab);
   }
 
-  // MODAL DE ADIÇÃO
   if (!$("addModal")) {
-    // CÓDIGO MODIFICADO (addMovies.js)
     const modal = document.createElement("div");
     modal.id = "addModal";
     modal.className =
@@ -323,77 +617,98 @@ function buildAddMovieUI() {
     modal.innerHTML = `
       <div class="bg-neutral-800 w-full max-w-2xl rounded-xl p-4 md:p-6 relative max-h-[95vh] h-full overflow-y-auto flex flex-col overscroll-contain">
         <button id="closeAddModal" class="absolute top-4 right-4 text-gray-300 hover:text-white">✕</button>
-        <h3 class="text-2xl font-bold mb-4 flex-shrink-0">Adicionar filme</h3>
+        <h3 id="addModalTitle" class="text-2xl font-bold mb-4 flex-shrink-0">Adicionar filme</h3>
+
+        <!-- 📺 Seletor Filme / Série -->
+        <div class="flex gap-2 mb-4 flex-shrink-0">
+          <button id="addTypeMovie" type="button"
+            class="px-4 py-2 rounded font-semibold text-sm bg-indigo-600 text-white">
+            🎬 Filme
+          </button>
+          <button id="addTypeSeries" type="button"
+            class="px-4 py-2 rounded font-semibold text-sm bg-neutral-700 text-neutral-300">
+            📺 Série
+          </button>
+        </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4 flex-grow overflow-y-auto pr-2">
-
-          <div class="relative"> <label class="block mb-1">Título</label>
+          <div class="relative">
+            <label class="block mb-1">Título</label>
             <input id="addTitle" class="w-full rounded p-2 bg-neutral-700" autocomplete="off" />
-          
             <div id="addTitleSuggestions"
                 class="absolute z-10 w-full bg-neutral-800 border border-neutral-600 rounded-b-md shadow-lg max-h-48 overflow-y-auto hidden">
             </div>
-            
             <label class="block mt-3 mb-1">Sinopse</label>
             <textarea id="addSynopsis" class="w-full rounded p-2 bg-neutral-700 min-h-28"></textarea>
-            
             <div class="flex gap-2 mt-2">
               <button id="addGenerateSynopsis" type="button" class="px-3 py-1 bg-indigo-600 rounded">Gerar</button>
               <button id="addClearSynopsis" type="button" class="px-3 py-1 bg-neutral-700 rounded">Limpar</button>
             </div>
           </div>
-
           <div>
             <label class="block mb-1">Pôster (URL)</label>
             <input id="addPosterUrl" class="w-full rounded p-2 bg-neutral-700" placeholder="https://..." />
-
             <div class="flex gap-2 mt-2">
               <button id="addFetchPoster" type="button" class="px-3 py-1 bg-indigo-600 rounded">Buscar da API</button>
               <button id="addUploadBtn" type="button" class="px-3 py-1 bg-neutral-700 rounded">Upload</button>
               <input id="addUploadInput" type="file" accept="image/*" class="hidden" />
               <button id="addRemovePoster" type="button" class="px-3 py-1 bg-red-600 rounded">Remover</button>
             </div>
-
             <img id="addPosterPreview"
               class="w-full h-44 object-cover rounded mt-3 bg-neutral-700"
               style="display:none" />
-
             <label class="block mt-3 mb-1">Categorias</label>
             <select id="addCategories" multiple class="w-full rounded p-2 bg-neutral-700"></select>
-
             <div class="flex gap-2 mt-2">
               <input id="addNewCategory" class="rounded p-2 bg-neutral-700 w-full" placeholder="Nova categoria" />
               <button id="addCategoryBtnLocal" type="button" class="px-3 py-1 bg-green-600 rounded">Criar</button>
             </div>
-
-            <label class="block mt-3 mb-1">URL streaming</label>
+            <label class="block mt-3 mb-1">URL streaming (opcional)</label>
             <input id="addStreaming" class="w-full rounded p-2 bg-neutral-700" />
-
             <div class="flex items-center gap-2 mt-2">
               <input id="addRemember" type="checkbox" />
               <label class="text-sm">Lembrar preferências</label>
             </div>
-
           </div>
         </div>
-
         <div class="flex justify-between mt-6 flex-shrink-0">
           <button id="cancelAddBtn" type="button" class="px-4 py-2 bg-neutral-700 rounded">Cancelar</button>
-          <button id="confirmAddBtn" type="button" class="px-4 py-2 bg-green-600 rounded">Salvar filme</button>
+          <button id="confirmAddBtn" type="button" class="px-4 py-2 bg-green-600 rounded">Salvar</button>
         </div>
       </div>
     `;
     document.body.appendChild(modal);
 
-    // EVENTOS
     $("closeAddModal").onclick = () => modal.classList.add("hidden");
-    $("cancelAddBtn").onclick = () => modal.classList.add("hidden");
-
-    $("addFetchPoster").onclick = handleFetchPoster; // AGORA USA TMDb
-    $("addUploadBtn").onclick = () => $("addUploadInput").click();
+    $("cancelAddBtn").onclick  = () => modal.classList.add("hidden");
+    $("addFetchPoster").onclick = handleFetchPoster;
+    $("addUploadBtn").onclick   = () => $("addUploadInput").click();
     $("addUploadInput").onchange = handlePosterUpload;
+    $("addRemovePoster").onclick = () => resetPosterPreview("");
 
-    $("addRemovePoster").onclick = () => resetPosterPreview(""); // Limpa o poster
+    // 📺 Seletor Filme / Série
+    const btnTypeMovie   = $("addTypeMovie");
+    const btnTypeSeries  = $("addTypeSeries");
+    const addModalTitle  = $("addModalTitle");
+
+    function setAddMediaType(type) {
+      addMediaType = type;
+      if (type === "movie") {
+        btnTypeMovie.className  = "px-4 py-2 rounded font-semibold text-sm bg-indigo-600 text-white";
+        btnTypeSeries.className = "px-4 py-2 rounded font-semibold text-sm bg-neutral-700 text-neutral-300";
+        addModalTitle.textContent = "Adicionar filme";
+      } else {
+        btnTypeSeries.className = "px-4 py-2 rounded font-semibold text-sm bg-indigo-600 text-white";
+        btnTypeMovie.className  = "px-4 py-2 rounded font-semibold text-sm bg-neutral-700 text-neutral-300";
+        addModalTitle.textContent = "Adicionar série";
+      }
+      // Limpa sugestões ao trocar o tipo
+      $("addTitleSuggestions").innerHTML = "";
+      $("addTitleSuggestions").classList.add("hidden");
+    }
+
+    btnTypeMovie.onclick  = () => setAddMediaType("movie");
+    btnTypeSeries.onclick = () => setAddMediaType("tv");
 
     $("addGenerateSynopsis").onclick = () => {
       const t = $("addTitle").value.trim();
@@ -418,22 +733,23 @@ function buildAddMovieUI() {
 
     $("confirmAddBtn").onclick = () => handleAddConfirm();
 
-    // [MELHORIA 5] Lógica de Autocompletar com TMDb
     let typingTimer;
-    const doneTypingInterval = 500; // 0.5 segundos
+    const doneTypingInterval = 500;
     const addTitleInput = $("addTitle");
     const addTitleSuggestions = $("addTitleSuggestions");
 
     addTitleInput.addEventListener("input", () => {
       clearTimeout(typingTimer);
-      if (addTitleInput.value.length < 3) { // Começa a sugerir após 3 caracteres
+      if (addTitleInput.value.length < 3) {
         addTitleSuggestions.classList.add("hidden");
         return;
       }
       typingTimer = setTimeout(async () => {
         const term = addTitleInput.value.trim();
         if (term.length >= 3) {
-          const suggestions = await searchMoviesTMDb(term);
+          const suggestions = addMediaType === "tv"
+            ? await searchTVTMDb(term)
+            : await searchMoviesTMDb(term);
           renderSuggestions(suggestions);
         } else {
           addTitleSuggestions.classList.add("hidden");
@@ -441,10 +757,7 @@ function buildAddMovieUI() {
       }, doneTypingInterval);
     });
 
-    addTitleInput.addEventListener("blur", () => {
-      // Esconde as sugestões após um pequeno atraso para permitir cliques
-      setTimeout(() => addTitleSuggestions.classList.add("hidden"), 150);
-    });
+    addTitleInput.addEventListener("blur",  () => { setTimeout(() => addTitleSuggestions.classList.add("hidden"), 150); });
     addTitleInput.addEventListener("focus", () => {
       if (addTitleSuggestions.innerHTML.trim() !== "" && addTitleInput.value.length >= 3) {
         addTitleSuggestions.classList.remove("hidden");
@@ -453,122 +766,89 @@ function buildAddMovieUI() {
 
     async function renderSuggestions(suggestions) {
       addTitleSuggestions.innerHTML = "";
-      if (suggestions.length === 0) {
-        addTitleSuggestions.classList.add("hidden");
-        return;
-      }
+      if (suggestions.length === 0) { addTitleSuggestions.classList.add("hidden"); return; }
       addTitleSuggestions.classList.remove("hidden");
-      suggestions.slice(0, 5).forEach(movie => { // Mostra só as 5 primeiras
+      suggestions.slice(0, 5).forEach(item => {
         const div = document.createElement("div");
         div.className = "px-4 py-2 cursor-pointer hover:bg-neutral-700 flex items-center";
-        // Previne o 'blur' do input antes do 'click'
-        div.onmousedown = (e) => {
-          e.preventDefault(); 
-          selectSuggestedMovie(movie.id); // USA O ID DA TMDb
-        }
-        
-        const posterPath = movie.poster_path ? `${TMDB_IMG_BASE_URL}${movie.poster_path}` : 'https://via.placeholder.com/50x75?text=NP';
-        const releaseYear = movie.release_date ? `(${movie.release_date.split('-')[0]})` : '';
-
+        div.onmousedown = (e) => { e.preventDefault(); selectSuggestedItem(item.id); };
+        const posterPath = item.poster_path ? `${TMDB_IMG_BASE_URL}${item.poster_path}` : "https://via.placeholder.com/50x75?text=NP";
+        // TV usa name, filme usa title
+        const displayName = item.title || item.name || "";
+        const dateField = item.release_date || item.first_air_date || "";
+        const releaseYear = dateField ? `(${dateField.split("-")[0]})` : "";
         div.innerHTML = `
-          <img src="${posterPath}"
-               class="w-8 h-12 object-cover mr-3 rounded" />
-          <span>${escapeHtml(movie.title)} ${releaseYear}</span>
+          <img src="${posterPath}" class="w-8 h-12 object-cover mr-3 rounded" />
+          <span>${escapeHtml(displayName)} ${releaseYear}</span>
         `;
         addTitleSuggestions.appendChild(div);
       });
     }
 
-    async function selectSuggestedMovie(movieId) {
-      showToast("Carregando detalhes do filme...");
-      const movieDetails = await fetchMovieDetailsTMDb(movieId);
-      addTitleSuggestions.classList.add("hidden"); // Esconde as sugestões
-
-      if (movieDetails) {
-        // 🎯 SALVA O TÍTULO ORIGINAL, se existir, senão usa o traduzido
-        tmpOriginalTitle = movieDetails.original_title || movieDetails.title || "";
-        
-        $("addTitle").value = movieDetails.title || movieDetails.original_title || "";
-        $("addSynopsis").value = movieDetails.overview || "Sinopse não disponível.";
-        
-        const posterUrl = movieDetails.poster_path ? `${TMDB_IMG_BASE_URL}${movieDetails.poster_path}` : '';
+    async function selectSuggestedItem(itemId) {
+      const isTV = addMediaType === "tv";
+      showToast(isTV ? "Carregando detalhes da série..." : "Carregando detalhes do filme...");
+      const details = isTV
+        ? await fetchTVDetailsTMDb(itemId)
+        : await fetchMovieDetailsTMDb(itemId);
+      addTitleSuggestions.classList.add("hidden");
+      if (details) {
+        tmpTmdbId = String(details.id);
+        // TV usa name/original_name, filme usa title/original_title
+        const displayTitle   = details.title    || details.name    || "";
+        const originalTitle  = details.original_title || details.original_name || displayTitle;
+        tmpOriginalTitle = originalTitle;
+        $("addTitle").value    = displayTitle;
+        $("addSynopsis").value = details.overview || "Sinopse não disponível.";
+        const posterUrl = details.poster_path ? `${TMDB_IMG_BASE_URL}${details.poster_path}` : "";
         $("addPosterUrl").value = posterUrl;
-        resetPosterPreview(posterUrl); // Usa a função adaptada
-
-        // Preencher categorias automaticamente
-        const newCategories = movieDetails.genres ? movieDetails.genres.map(g => g.name) : [];
+        resetPosterPreview(posterUrl);
+        const newCategories = details.genres ? details.genres.map(g => g.name) : [];
         newCategories.forEach(c => categoriesSet.add(c));
-        rebuildCategoryOptions(); // Atualiza as opções do select
-
-        // Seleciona as categorias no dropdown
+        rebuildCategoryOptions();
         const addSel = $("addCategories");
-        if (addSel) {
-            Array.from(addSel.options).forEach(option => {
-            option.selected = newCategories.includes(option.value);
-            });
-        }
-
-        showToast("Filme preenchido automaticamente!", "success");
+        if (addSel) Array.from(addSel.options).forEach(option => { option.selected = newCategories.includes(option.value); });
+        showToast(isTV ? "Série preenchida automaticamente!" : "Filme preenchido automaticamente!", "success");
       } else {
-        showToast("Não foi possível carregar os detalhes do filme.", "warning");
+        showToast("Não foi possível carregar os detalhes.", "warning");
       }
     }
   }
-  // Fora do 'if (!$("addModal"))'
-  // Garante que as categorias sejam construídas mesmo se o modal já existir
+
   const addSel = $("addCategories");
-  if (!addSel) { // Se o modal não foi construído, constrói as categorias
-      rebuildCategoryOptions();
-  }
+  if (!addSel) rebuildCategoryOptions();
 }
 
 /* ---------------- POSTER ACTIONS ---------------- */
-
-// [MELHORIA 5] Função 'handleFetchPoster' MODIFICADA para TMDb
 async function handleFetchPoster() {
   const title = $("addTitle").value.trim();
   if (!title) return showToast("Digite o título primeiro");
+  const isTV = addMediaType === "tv";
+  showToast(isTV ? "Buscando detalhes da série..." : "Buscando detalhes do filme e pôster...");
 
-  showToast("Buscando detalhes do filme e pôster...");
-
-  // Busca por termo para achar o ID
-  const searchResults = await searchMoviesTMDb(title);
+  const searchResults = isTV ? await searchTVTMDb(title) : await searchMoviesTMDb(title);
   if (!searchResults || searchResults.length === 0) {
-    return showToast("Nenhum filme encontrado na TMDb com esse título.", "warning");
+    return showToast(isTV ? "Nenhuma série encontrada na TMDb." : "Nenhum filme encontrado na TMDb.", "warning");
   }
 
-  // Pega o ID do primeiro resultado (o mais relevante)
-  const movieId = searchResults[0].id;
-  const movieDetails = await fetchMovieDetailsTMDb(movieId);
+  const itemId = searchResults[0].id;
+  tmpTmdbId = String(itemId);
+  const details = isTV ? await fetchTVDetailsTMDb(itemId) : await fetchMovieDetailsTMDb(itemId);
 
-  if (movieDetails) {
-    // 🎯 TÍTULO PRIMÁRIO para o campo 'title' do Firebase
-    const apiTitle = movieDetails.title || movieDetails.original_title || "";
-    
-    // 🎯 SALVA O TÍTULO ORIGINAL, se existir, senão usa o traduzido
-    tmpOriginalTitle = movieDetails.original_title || apiTitle;
-
-    // Preenche o título com o nome oficial (em PT-BR, se houver)
-    $("addTitle").value = apiTitle;
-      
-    const posterUrl = movieDetails.poster_path ? `${TMDB_IMG_BASE_URL}${movieDetails.poster_path}` : '';
-    resetPosterPreview(posterUrl); // Usa a função adaptada
-
-    $("addSynopsis").value = movieDetails.overview || "Sinopse não disponível.";
-
-    const newCategories = movieDetails.genres ? movieDetails.genres.map(g => g.name) : [];
+  if (details) {
+    const displayTitle  = details.title    || details.name    || "";
+    const originalTitle = details.original_title || details.original_name || displayTitle;
+    tmpOriginalTitle = originalTitle;
+    $("addTitle").value = displayTitle;
+    const posterUrl = details.poster_path ? `${TMDB_IMG_BASE_URL}${details.poster_path}` : "";
+    resetPosterPreview(posterUrl);
+    $("addSynopsis").value = details.overview || "Sinopse não disponível.";
+    const newCategories = details.genres ? details.genres.map(g => g.name) : [];
     newCategories.forEach(c => categoriesSet.add(c));
-    rebuildCategoryOptions(); 
-
+    rebuildCategoryOptions();
     const addSel = $("addCategories");
-    if (addSel) {
-        Array.from(addSel.options).forEach(option => {
-        option.selected = newCategories.includes(option.value);
-        });
-    }
-
-    showToast("Filme preenchido!", "success");
-
+    if (addSel) Array.from(addSel.options).forEach(option => { option.selected = newCategories.includes(option.value); });
+    showToast(isTV ? "Série preenchida!" : "Filme preenchido!", "success");
   } else {
     showToast("Nenhum pôster ou detalhes encontrados para o título.", "warning");
   }
@@ -577,94 +857,49 @@ async function handleFetchPoster() {
 async function handlePosterUpload(e) {
   const file = e.target.files?.[0];
   if (!file) return;
-
   const data = await fileToDataURL(file);
   tmpPosterDataUrl = data;
   tmpPosterUrl = "";
-
   const addPosterPreview = $("addPosterPreview");
-  if(addPosterPreview) {
-    addPosterPreview.src = data;
-    addPosterPreview.style.display = "block";
-  }
-  
+  if (addPosterPreview) { addPosterPreview.src = data; addPosterPreview.style.display = "block"; }
   const addPosterUrl = $("addPosterUrl");
-  if(addPosterUrl) {
-    addPosterUrl.value = "";
-  }
+  if (addPosterUrl) addPosterUrl.value = "";
 }
 
-// [Passo 3] Função 'resetPosterPreview' ADAPTADA
 function resetPosterPreview(posterUrl = "") {
   tmpPosterDataUrl = "";
   tmpPosterUrl = posterUrl;
-  
   const addPosterPreview = $("addPosterPreview");
-  if(addPosterPreview) {
-    addPosterPreview.src = posterUrl;
-    addPosterPreview.style.display = posterUrl ? "block" : "none";
-  }
-  
+  if (addPosterPreview) { addPosterPreview.src = posterUrl; addPosterPreview.style.display = posterUrl ? "block" : "none"; }
   const addPosterUrl = $("addPosterUrl");
-  if(addPosterUrl) {
-    addPosterUrl.value = posterUrl;
-  }
+  if (addPosterUrl) addPosterUrl.value = posterUrl;
 }
 
 /* ----------------- LOCALIZATION ----------------- */
-
-/**
- * Traduz os textos estáticos da UI e atualiza os botões/filtros.
- */
 function applyLocalization() {
-    const texts = textMap[currentLang];
-    
-    // 1. Títulos principais e botões de controle
-    const brand = $("brand");
-    if (brand) brand.textContent = texts.brand;
-    
-    // Botão Sair
-    const logoutBtnEl = $("logoutBtn");
-    if (logoutBtnEl) logoutBtnEl.textContent = texts.logout;
-    
-    const toggleBtn = $("toggleSelectModeBtn");
-    if (toggleBtn) {
-        if (multiSelectMode) {
-             toggleBtn.textContent = texts.select_toggle_on;
-        } else {
-             toggleBtn.textContent = texts.select_toggle_off;
-        }
-    }
-    
-    if (deleteSelectedBtn) {
-        updateDeleteSelectedButton(); // Atualiza o texto de exclusão
-    }
-
-    // 2. Filtros e Ordenação (re-renderiza UI dinamicamente)
-    rebuildCategoryOptions();
-    renderSortFilters();
-    
-    // 3. Re-renderiza filmes para aplicar o título correto
-    renderMovies(); 
+  const texts = textMap[currentLang];
+  const brand = $("brand");
+  if (brand) brand.textContent = texts.brand;
+  const logoutBtnEl = $("logoutBtn");
+  if (logoutBtnEl) logoutBtnEl.textContent = texts.logout;
+  const toggleBtn = $("toggleSelectModeBtn");
+  if (toggleBtn) toggleBtn.textContent = multiSelectMode ? texts.select_toggle_on : texts.select_toggle_off;
+  if (deleteSelectedBtn) updateDeleteSelectedButton();
+  rebuildCategoryOptions();
+  renderSortFilters();
+  renderMovies();
 }
 
-/**
- * Alterna entre pt-BR e en-US.
- */
 function toggleLanguage() {
-    currentLang = currentLang === 'pt-BR' ? 'en-US' : 'pt-BR';
-    // Reinicia filtros e ordenação ao mudar de idioma para evitar inconsistências
-    activeCategoryFilters.clear();
-    currentSortBy = "date"; 
-    
-    applyLocalization();
+  currentLang = currentLang === "pt-BR" ? "en-US" : "pt-BR";
+  activeCategoryFilters.clear();
+  currentSortBy = "date";
+  applyLocalization();
 }
-
 
 /* ---------------- CATEGORY OPTIONS ---------------- */
-
 function rebuildCategoryOptions() {
-  const texts = textMap[currentLang]; // 🎯 PEGA O MAPA DE TEXTO
+  const texts = textMap[currentLang];
 
   const addSel = $("addCategories");
   if (addSel) {
@@ -672,7 +907,7 @@ function rebuildCategoryOptions() {
     [...categoriesSet].sort().forEach(c => {
       const opt = document.createElement("option");
       opt.value = c;
-      opt.textContent = texts[c] || c; // Traduz categoria no modal Adicionar
+      opt.textContent = texts[c] || c;
       addSel.appendChild(opt);
     });
   }
@@ -681,24 +916,34 @@ function rebuildCategoryOptions() {
   if (!filterContainer) return;
 
   filterContainer.innerHTML = "";
-  
-  // 🎯 BOTÃO 'TODOS': Limpa todos os filtros ativos
+
+  // Botão "Todos"
   const allBtn = document.createElement("button");
-  allBtn.textContent = texts.Todos; // 🎯 USA O TEXTO TRADUZIDO
-  // O botão 'Todos' está ativo se activeCategoryFilters estiver vazio
-  allBtn.className = activeCategoryFilters.size === 0 ? "filter-btn-active" : "filter-btn";
+  allBtn.textContent = texts.Todos;
+  allBtn.className = (activeCategoryFilters.size === 0 && !showOnlyFavorites) ? "filter-btn-active" : "filter-btn";
   allBtn.onclick = () => {
-      activeCategoryFilters.clear(); // Limpa todos
-      rebuildCategoryOptions();
-      renderMovies();
+    activeCategoryFilters.clear();
+    showOnlyFavorites = false;
+    rebuildCategoryOptions();
+    renderMovies();
   };
   filterContainer.appendChild(allBtn);
 
+  // ❤️ Botão Favoritos
+  const favBtn = document.createElement("button");
+  favBtn.textContent = texts.favorites_filter;
+  favBtn.className = showOnlyFavorites ? "filter-btn-active fav-filter-btn" : "filter-btn fav-filter-btn";
+  favBtn.onclick = () => {
+    showOnlyFavorites = !showOnlyFavorites;
+    if (showOnlyFavorites) activeCategoryFilters.clear();
+    rebuildCategoryOptions();
+    renderMovies();
+  };
+  filterContainer.appendChild(favBtn);
 
   [...categoriesSet].sort().forEach(category => {
     const btn = document.createElement("button");
-    btn.textContent = texts[category] || category; // 🎯 USA O TEXTO TRADUZIDO DA CATEGORIA
-    // 🎯 VERIFICAÇÃO SE A CATEGORIA ESTÁ ATIVA
+    btn.textContent = texts[category] || category;
     const isActive = activeCategoryFilters.has(category);
     btn.className = isActive ? "filter-btn-active" : "filter-btn";
     btn.onclick = () => setCategoryFilter(category);
@@ -706,131 +951,95 @@ function rebuildCategoryOptions() {
   });
 }
 
-// 🎯 FUNÇÃO MODIFICADA PARA TOGGLE (LIGA/DESLIGA)
 function setCategoryFilter(category) {
-  // 🎯 LÓGICA DE TOGGLE (liga/desliga)
+  showOnlyFavorites = false;
   if (activeCategoryFilters.has(category)) {
     activeCategoryFilters.delete(category);
   } else {
     activeCategoryFilters.add(category);
   }
-  
   rebuildCategoryOptions();
   renderMovies();
 }
 
 /* ----------------- RENDER/CONTROL SORT ----------------- */
-
 function renderSortFilters() {
-    const texts = textMap[currentLang]; // 🎯 PEGA O MAPA DE TEXTO
-    const sortContainer = $("sortFilters");
-    if (!sortContainer) return;
-    
-    // Atualiza os botões de ordenação
-    const dateBtn = $("sortByDateBtn");
-    const titleBtn = $("sortByTitleBtn");
-
-    if (dateBtn) {
-        dateBtn.textContent = texts.sort_date; // 🎯 TEXTO TRADUZIDO
-        dateBtn.className = currentSortBy === "date" ? "filter-btn-active" : "filter-btn";
-        dateBtn.onclick = () => setSortBy("date");
-    }
-    if (titleBtn) {
-        titleBtn.textContent = texts.sort_title; // 🎯 TEXTO TRADUZIDO
-        titleBtn.className = currentSortBy === "title" ? "filter-btn-active" : "filter-btn";
-        titleBtn.onclick = () => setSortBy("title");
-    }
+  const texts = textMap[currentLang];
+  const dateBtn  = $("sortByDateBtn");
+  const titleBtn = $("sortByTitleBtn");
+  if (dateBtn) {
+    dateBtn.textContent = texts.sort_date;
+    dateBtn.className = currentSortBy === "date" ? "filter-btn-active" : "filter-btn";
+    dateBtn.onclick = () => setSortBy("date");
+  }
+  if (titleBtn) {
+    titleBtn.textContent = texts.sort_title;
+    titleBtn.className = currentSortBy === "title" ? "filter-btn-active" : "filter-btn";
+    titleBtn.onclick = () => setSortBy("title");
+  }
 }
 
 function setSortBy(sortBy) {
-    if (currentSortBy === sortBy) return; // Não faz nada se já estiver ativo
-
-    currentSortBy = sortBy;
-    renderSortFilters();
-    renderMovies(); // Re-renderiza a lista com a nova ordenação
+  if (currentSortBy === sortBy) return;
+  currentSortBy = sortBy;
+  renderSortFilters();
+  renderMovies();
 }
 
 /* ============================================================
                 ADICIONAR FILME
 ============================================================ */
-
 async function openAddModal() {
-  // Garante que os elementos do modal existem antes de usá-los
   const addTitle = $("addTitle");
-  if (!addTitle) {
-      console.error("Modal de adição não está pronto!");
-      return;
-  }
-  
+  if (!addTitle) { console.error("Modal de adição não está pronto!"); return; }
   addTitle.value = "";
   $("addSynopsis").value = "";
   $("addPosterUrl").value = "";
-  resetPosterPreview(); // Limpa o poster ao abrir
-  // $("addRating").value = ""; // <--- REMOVIDO
-  
-  tmpOriginalTitle = ""; // 🎯 LIMPA TÍTULO ORIGINAL
-  
+  resetPosterPreview();
+  tmpTmdbId = "";
+  tmpOriginalTitle = "";
+  // 📺 Reseta para filme ao abrir o modal
+  addMediaType = "movie";
+  const btnTypeMovie2  = $("addTypeMovie");
+  const btnTypeSeries2 = $("addTypeSeries");
+  const addModalTitle2 = $("addModalTitle");
+  if (btnTypeMovie2)  btnTypeMovie2.className  = "px-4 py-2 rounded font-semibold text-sm bg-indigo-600 text-white";
+  if (btnTypeSeries2) btnTypeSeries2.className = "px-4 py-2 rounded font-semibold text-sm bg-neutral-700 text-neutral-300";
+  if (addModalTitle2) addModalTitle2.textContent = "Adicionar filme";
   $("addStreaming").value = userPreferences.defaultStreaming || "";
   $("addRemember").checked = !!(userPreferences.defaultStreaming);
   const defaultCats = userPreferences.defaultCategories || [];
-  
-  // Garante que 'addCategories' existe antes de iterar
   const addSel = $("addCategories");
-  if (addSel) {
-    Array.from(addSel.options).forEach(o => {
-      o.selected = defaultCats.includes(o.value);
-    });
-  }
-  
+  if (addSel) Array.from(addSel.options).forEach(o => { o.selected = defaultCats.includes(o.value); });
   const addModal = $("addModal");
   if (addModal) addModal.classList.remove("hidden");
-} 
+}
 
 async function handleAddConfirm() {
   if (!userId) return;
-
   const title = safeText($("addTitle").value).trim();
   if (!title) return showToast("Digite o título", "warning");
-
   const synopsis = safeText($("addSynopsis").value).trim();
   const addSel = $("addCategories");
-  const categories = addSel ? Array.from(addSel.selectedOptions).map(
-    o => o.value
-  ) : [];
-
+  const categories = addSel ? Array.from(addSel.selectedOptions).map(o => o.value) : [];
   categories.forEach(c => categoriesSet.add(c));
-
-  // [REMOVIDO]
-  // const rating = ...
-
   const streamingUrlVal = safeText($("addStreaming").value).trim() || null;
   const remember = $("addRemember").checked;
-
-  const poster =
-    tmpPosterDataUrl ||
-    $("addPosterUrl").value.trim() ||
-    tmpPosterUrl ||
-    "";
-
+  const poster = tmpPosterDataUrl || $("addPosterUrl").value.trim() || tmpPosterUrl || "";
   const payload = {
-    title,
-    description: synopsis,
-    categories,
-    // rating, // <--- REMOVIDO
-    streamingUrl: streamingUrlVal,
-    remember,
-    poster,
+    title, description: synopsis, categories,
+    streamingUrl: streamingUrlVal, remember, poster,
     createdAt: Date.now(),
-    originalTitle: tmpOriginalTitle || title // 🎯 ADICIONA TÍTULO ORIGINAL
+    originalTitle: tmpOriginalTitle || title,
+    tmdbId: tmpTmdbId || "",
+    mediaType: addMediaType || "movie",  // 📺 salva o tipo
+    favorite: false
   };
-
   try {
     await addDoc(collection(db, "users", userId, "movies"), payload);
     showToast("Filme adicionado!", "success");
-    
     const addModal = $("addModal");
     if (addModal) addModal.classList.add("hidden");
-
     if (remember) {
       userPreferences.defaultStreaming = streamingUrlVal;
       userPreferences.defaultCategories = categories;
@@ -839,302 +1048,255 @@ async function handleAddConfirm() {
       userPreferences.defaultCategories = [];
     }
     await saveUserPreferences();
-
     await loadMovies();
-
   } catch (e) {
     console.error(e);
     showToast("Erro ao salvar filme", "error");
   }
 }
 
-/* ---------------- LOAD MOVIES ---------------- */
+/* ============================================================
+   💀 SKELETON LOADING — helpers
+============================================================ */
+function createSkeletonCard() {
+  const card = document.createElement("div");
+  card.className = "skeleton-card";
+  card.innerHTML = `
+    <div class="skeleton-shimmer skeleton-poster"></div>
+    <div class="skeleton-footer">
+      <div class="skeleton-shimmer skeleton-title"></div>
+      <div class="skeleton-shimmer skeleton-subtitle"></div>
+    </div>
+  `;
+  return card;
+}
 
+function showSkeletons(count = 12) {
+  if (!movieGrid) return;
+  movieGrid.innerHTML = "";
+  for (let i = 0; i < count; i++) movieGrid.appendChild(createSkeletonCard());
+}
+
+/* ---------------- LOAD MOVIES ---------------- */
 async function loadMovies() {
   if (!userId) return;
+  if (!movieGrid) { console.error("movieGrid não foi encontrado!"); return; }
 
-  if (movieGrid) {
-    movieGrid.innerHTML =
-      `<div class="col-span-full text-center text-neutral-400 py-8">Carregando…</div>`;
-  } else {
-      console.error("movieGrid não foi encontrado!");
-      return; 
-  }
+  showSkeletons(12);
 
   try {
-    const q = query(
-      collection(db, "users", userId, "movies"),
-      // 🎯 REMOVIDO orderBy: A ordenação é feita no lado do cliente (renderMovies)
-    );
-
+    const q = query(collection(db, "users", userId, "movies"));
     const snap = await getDocs(q);
     movies = [];
-
     snap.forEach(d => {
       const data = d.data();
       movies.push({ id: d.id, ...data });
-
       (data.categories || []).forEach(c => categoriesSet.add(c));
     });
-
     renderMovies();
     rebuildCategoryOptions();
   } catch (e) {
     console.error(e);
     showToast("Erro ao carregar filmes", "error");
+    if (movieGrid) movieGrid.innerHTML = `<div class="col-span-full text-center text-neutral-400 py-8">Erro ao carregar. Tente novamente.</div>`;
   }
 }
 
 /* ---------------- RENDER CARDS ---------------- */
-
-// [CORREÇÃO] Esta é a função 'renderMovies' COMPLETA E CORRIGIDA
 function renderMovies() {
-
-  const texts = textMap[currentLang]; // 🎯 PEGA O MAPA DE TEXTO
-
-  if (!movieGrid) return; 
+  const texts = textMap[currentLang];
+  if (!movieGrid) return;
 
   movieGrid.innerHTML = "";
 
   const term = (document.querySelector("#searchInput")?.value || "").toLowerCase();
   const isFilteringByCategories = activeCategoryFilters.size > 0;
 
-  // 🎯 LÓGICA DE ORDENAÇÃO (APLICADA AQUI)
-  let sortedMovies = [...movies]; // Cria uma cópia
-
+  let sortedMovies = [...movies];
   if (currentSortBy === "title") {
     sortedMovies.sort((a, b) => {
-      // 🎯 Ordenação por título precisa verificar qual título está ativo
-      const titleA = ((currentLang === 'en-US' ? a.originalTitle : a.title) || "").toLowerCase();
-      const titleB = ((currentLang === 'en-US' ? b.originalTitle : b.title) || "").toLowerCase();
+      const titleA = ((currentLang === "en-US" ? a.originalTitle : a.title) || "").toLowerCase();
+      const titleB = ((currentLang === "en-US" ? b.originalTitle : b.title) || "").toLowerCase();
       return titleA.localeCompare(titleB);
     });
   } else {
-    // Padrão: 'date' (Mais Recentes)
     sortedMovies.sort((a, b) => b.createdAt - a.createdAt);
   }
 
-  // 🎯 FILTRAGEM AGORA USA sortedMovies
   const filtered = sortedMovies.filter(m => {
     const titleMatch = (m.title || "").toLowerCase().includes(term);
-    const descMatch = (m.description || "").toLowerCase().includes(term);
-    
-    // 🎯 LÓGICA OR PARA FILTROS DE CATEGORIA
-    // Se não houver filtro ativo, catMatch é true.
-    // Se houver filtro, catMatch é true se o filme tiver PELO MENOS UMA das categorias ativas.
-    const catMatch = !isFilteringByCategories || 
-                     (m.categories || []).some(cat => activeCategoryFilters.has(cat));
-    
-    return (titleMatch || descMatch) && catMatch;
+    const descMatch  = (m.description || "").toLowerCase().includes(term);
+    const catMatch   = !isFilteringByCategories || (m.categories || []).some(cat => activeCategoryFilters.has(cat));
+    // ❤️ Filtro de favoritos
+    const favMatch   = !showOnlyFavorites || m.favorite === true;
+    return (titleMatch || descMatch) && catMatch && favMatch;
   });
 
   if (!filtered.length) {
-    movieGrid.innerHTML = `
-      <div class="col-span-full text-center text-neutral-400 py-8">
-        Nenhum filme encontrado.
-      </div>`;
+    movieGrid.innerHTML = `<div class="col-span-full text-center text-neutral-400 py-8">Nenhum filme encontrado.</div>`;
     return;
   }
 
   filtered.forEach(m => {
     const card = document.createElement("div");
-    // 🎯 ADICIONA 'relative' para posicionar o checkbox/ring
-    card.className = "poster-card relative"; 
+    card.className = "poster-card relative";
 
     const isSelected = selectedMovies.has(m.id);
 
-    // 🎯 MODO DE SELEÇÃO: Adicionar checkbox e ajuste de CSS
     if (multiSelectMode) {
       card.innerHTML += `
-        <input type="checkbox" id="select-${m.id}" 
+        <input type="checkbox" id="select-${m.id}"
                class="absolute top-2 right-2 w-5 h-5 z-20 cursor-pointer checked:accent-red-600"
-               ${isSelected ? 'checked' : ''} />
+               ${isSelected ? "checked" : ""} />
       `;
-      // Adicionar um efeito visual para o card selecionado
-      if (isSelected) {
-          card.classList.add('ring-4', 'ring-red-600');
-      } else {
-          card.classList.remove('ring-4', 'ring-red-600');
-      }
+      if (isSelected) card.classList.add("ring-4", "ring-red-600");
+      else card.classList.remove("ring-4", "ring-red-600");
     }
 
     const desc = (m.description || "").substring(0, 120);
+    const displayTitle = escapeHtml(currentLang === "en-US" && m.originalTitle ? m.originalTitle : m.title);
 
-    // [MELHORIA 5] NOVO HTML DO CARD (Com link no poster)
-    
-    // Verifica se a URL de streaming existe e é válida
-    const hasStreamingUrl = m.streamingUrl && (m.streamingUrl.startsWith('http://') || m.streamingUrl.startsWith('https://'));
-    const posterImgHtml = `<img src="${m.poster}" class="poster-image" alt="${escapeHtml(m.title)}" onerror="this.style.opacity='.3'" />`;
-    
-    // 🎯 Título exibido: Se for EN-US, usa o originalTitle; se não tiver, usa o title.
-    const displayTitle = escapeHtml(
-        (currentLang === 'en-US' && m.originalTitle) ? m.originalTitle : m.title
-    );
+    const posterHtml = `
+      <div class="poster-link" style="position:relative; cursor:pointer; display:block;" title="▶ Assistir agora">
+        <img src="${m.poster}" class="poster-image" alt="${escapeHtml(m.title)}" onerror="this.style.opacity='.3'" />
+        <div style="
+          position:absolute; top:50%; left:50%;
+          transform:translate(-50%,-50%);
+          width:52px; height:52px;
+          background:rgba(0,0,0,0.65);
+          border-radius:50%;
+          display:flex; align-items:center; justify-content:center;
+          opacity:0; transition:opacity 0.2s; pointer-events:none;
+        " class="play-overlay">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>
+        </div>
+      </div>
+    `;
 
     card.innerHTML += `
-      ${hasStreamingUrl 
-        ? `<a href="${m.streamingUrl}" target="_blank" rel="noopener noreferrer" class="poster-link">${posterImgHtml}</a>` 
-        : posterImgHtml
-      }
-
+      ${posterHtml}
       <div class="poster-info">
-        <div>
-          <div class="poster-title">${displayTitle}</div> 
-          <div class="poster-description">${escapeHtml(desc)}</div>
+        <div class="poster-fav-row">
+          <div>
+            <div class="poster-title">${displayTitle}</div>
+            <div class="poster-description">${escapeHtml(desc)}</div>
+          </div>
         </div>
-
         <div class="mt-3 flex justify-between items-center">
           <button class="read-more-btn">${texts.read_more}</button>
-          
-          <div class="actions-menu">
-            <button class="actions-menu-btn">...</button>
-            <div class="actions-dropdown">
-              <button class="edit-btn">Editar</button>
-              <button class="delete-btn">Excluir</button>
+          <div class="flex items-center gap-2">
+            <button class="fav-btn-inline">${m.favorite ? "❤️" : "🤍"}</button>
+            <div class="actions-menu">
+              <button class="actions-menu-btn">...</button>
+              <div class="actions-dropdown">
+                <button class="edit-btn">Editar</button>
+                <button class="delete-btn">Excluir</button>
+              </div>
             </div>
           </div>
         </div>
       </div>
     `;
 
-    // 🎯 EVENTO PRINCIPAL DO CARD PARA MODO SELEÇÃO/EDIÇÃO
-    card.onclick = (e) => {
-        // Se estiver em modo de seleção, o clique seleciona/desseleciona o card
-        if (multiSelectMode) {
-            // Evita que o clique no checkbox ou menu cause duplo evento
-            if (e.target.type === 'checkbox' || e.target.closest('.actions-menu')) return; 
-
-            if (selectedMovies.has(m.id)) {
-                selectedMovies.delete(m.id);
-            } else {
-                selectedMovies.add(m.id);
-            }
-            
-            // Re-renderiza para atualizar a UI
-            updateDeleteSelectedButton();
-            renderMovies(); 
-        } else {
-            // Comportamento original: Abre o modal 'Leia mais'
-            if (!e.target.closest('.actions-menu')) {
-                 openMainModal(m, false);
-            }
-        }
-    };
-
-
-    // 🎯 NOVOS EVENTOS PARA O CHECKBOX (Garante que clique no checkbox funciona)
-    const checkbox = card.querySelector(`#select-${m.id}`);
-    if(checkbox) {
-        checkbox.onclick = (e) => {
-            e.stopPropagation(); // Impede o evento de clique do card (pai)
-            if (e.target.checked) {
-                selectedMovies.add(m.id);
-            } else {
-                selectedMovies.delete(m.id);
-            }
-            updateDeleteSelectedButton();
-            renderMovies(); 
-        };
+    // ❤️ Evento do botão de favorito inline
+    const favBtnInline = card.querySelector(".fav-btn-inline");
+    if (favBtnInline) {
+      favBtnInline.onclick = async (e) => {
+        e.stopPropagation();
+        favBtnInline.disabled = true;
+        await toggleFavorite(m.id, m.favorite || false);
+        favBtnInline.disabled = false;
+      };
     }
-    
-    // Eventos originais do Menu (apenas se não estiver no modo de seleção)
-    const menuBtn = card.querySelector(".actions-menu-btn");
-    const dropdown = card.querySelector(".actions-dropdown");
-    
-    menuBtn.onclick = (e) => {
-        if (!multiSelectMode) {
-             e.stopPropagation(); 
-             document.querySelectorAll(".actions-dropdown.show").forEach(menu => {
-                 if (menu !== dropdown) menu.classList.remove("show");
-             });
-             dropdown.classList.toggle("show");
-        }
-    };
-    
-    // Reaplicar eventos de edição/exclusão individual (se o modo de seleção estiver desativado)
-    card.querySelector(".edit-btn").onclick = () => {
-      if (!multiSelectMode) { dropdown.classList.remove("show"); openMainModal(m, true); }
+
+    // Hover no pôster
+    const posterDiv   = card.querySelector(".poster-link");
+    const playOverlay = card.querySelector(".play-overlay");
+    if (posterDiv && playOverlay) {
+      posterDiv.addEventListener("mouseenter", () => { playOverlay.style.opacity = "1"; });
+      posterDiv.addEventListener("mouseleave", () => { playOverlay.style.opacity = "0"; });
+    }
+
+    // Click principal do card
+    card.onclick = (e) => {
+      if (e.target.closest(".actions-menu") || e.target.closest(".actions-dropdown")) return;
+      if (e.target.closest(".fav-btn")) return; // ❤️ não propaga para o card
+      if (multiSelectMode) {
+        if (e.target.type === "checkbox") return;
+        if (selectedMovies.has(m.id)) selectedMovies.delete(m.id);
+        else selectedMovies.add(m.id);
+        updateDeleteSelectedButton();
+        renderMovies();
+      } else {
+        if (e.target.closest(".poster-link")) openPlayerModal(m);
+      }
     };
 
-    card.querySelector(".delete-btn").onclick = () => {
-      if (!multiSelectMode) { dropdown.classList.remove("show"); deleteMovieConfirm(m.id); }
+    const checkbox = card.querySelector(`#select-${m.id}`);
+    if (checkbox) {
+      checkbox.onclick = (e) => {
+        e.stopPropagation();
+        if (e.target.checked) selectedMovies.add(m.id);
+        else selectedMovies.delete(m.id);
+        updateDeleteSelectedButton();
+        renderMovies();
+      };
+    }
+
+    const menuBtn  = card.querySelector(".actions-menu-btn");
+    const dropdown = card.querySelector(".actions-dropdown");
+
+    menuBtn.onclick = (e) => {
+      if (!multiSelectMode) {
+        e.stopPropagation();
+        document.querySelectorAll(".actions-dropdown.show").forEach(menu => { if (menu !== dropdown) menu.classList.remove("show"); });
+        dropdown.classList.toggle("show");
+      }
     };
-    
-    // Desativar "Leia mais" no modo seleção
-    card.querySelector(".read-more-btn").onclick = () => {
-        if (!multiSelectMode) openMainModal(m, false);
-    };
+
+    card.querySelector(".edit-btn").onclick   = () => { if (!multiSelectMode) { dropdown.classList.remove("show"); openMainModal(m, true); } };
+    card.querySelector(".delete-btn").onclick  = () => { if (!multiSelectMode) { dropdown.classList.remove("show"); deleteMovieConfirm(m.id); } };
+    card.querySelector(".read-more-btn").onclick = () => { if (!multiSelectMode) openMainModal(m, false); };
 
     movieGrid.appendChild(card);
   });
-  
-  // Adiciona um clique global para fechar menus abertos
+
   document.addEventListener("click", (e) => {
-    if (!e.target.closest('.actions-menu')) {
-      document.querySelectorAll(".actions-dropdown.show").forEach(menu => {
-        menu.classList.remove("show");
-      });
+    if (!e.target.closest(".actions-menu")) {
+      document.querySelectorAll(".actions-dropdown.show").forEach(menu => menu.classList.remove("show"));
     }
   });
 }
 
 /* ---------------- MAIN MODAL ---------------- */
-
-// [MELHORIA 5] Função 'openMainModal' MODIFICADA (Pedido 1)
 function openMainModal(movie, editable = false) {
-  // 🎯 Bloquear se estiver no modo de seleção
   if (multiSelectMode) return;
-    
   editingId = movie.id;
-  const modalContent = $("modalContent"); // Pega o div de conteúdo
-
-  // Pega todos os elementos de edição
-  const editElements = modalContent.querySelectorAll('.edit-element');
-  const editElementsFlex = modalContent.querySelectorAll('.edit-element-flex');
-
-  // Configura o modo (visualização ou edição)
+  const modalContent = $("modalContent");
+  const editElements     = modalContent.querySelectorAll(".edit-element");
+  const editElementsFlex = modalContent.querySelectorAll(".edit-element-flex");
   if (editable) {
-    // MODO EDIÇÃO
     modalContent.classList.remove("modal-view-mode");
-    modalSinopse.readOnly = false; // Permite editar sinopse
-    
-    // Mostra todos os elementos de edição
-    editElements.forEach(el => el.style.display = 'block');
-    editElementsFlex.forEach(el => el.style.display = 'flex');
-    $("modalCategories").style.display = 'none'; // Esconde pills
-
+    modalSinopse.readOnly = false;
+    editElements.forEach(el => (el.style.display = "block"));
+    editElementsFlex.forEach(el => (el.style.display = "flex"));
+    $("modalCategories").style.display = "none";
   } else {
-    // MODO LEIA MAIS (view-mode)
     modalContent.classList.add("modal-view-mode");
-    modalSinopse.readOnly = true; // Bloqueia edição da sinopse
-    
-    // Esconde todos os elementos de edição
-    editElements.forEach(el => el.style.display = 'none');
-    editElementsFlex.forEach(el => el.style.display = 'none');
-    $("modalCategories").style.display = 'flex'; // Mostra pills
+    modalSinopse.readOnly = true;
+    editElements.forEach(el => (el.style.display = "none"));
+    editElementsFlex.forEach(el => (el.style.display = "none"));
+    $("modalCategories").style.display = "flex";
   }
-
   modalPoster.src = movie.poster || "";
-  
-  // 🎯 TÍTULO DO MODAL: Se for EN-US, usa o originalTitle
-  modalTitle.textContent = (currentLang === 'en-US' && movie.originalTitle) 
-                           ? movie.originalTitle 
-                           : movie.title || "";
-  
+  modalTitle.textContent = currentLang === "en-US" && movie.originalTitle ? movie.originalTitle : movie.title || "";
   modalSinopse.value = movie.description || "";
-  modalSinopse.dataset.lang = 'pt-BR'; // Reseta o idioma para o padrão
-  // modalRating.value = movie.rating ?? ""; // <--- REMOVIDO
+  modalSinopse.dataset.lang = "pt-BR";
   modalStreaming.value = movie.streamingUrl ?? "";
   rememberStreaming.checked = movie.remember ?? false;
+  if (modalPosterUrl) modalPosterUrl.value = movie.poster || "";
 
-  // 🎯 Adicionar a URL do pôster ao campo de input (Edição de URL)
-  if (modalPosterUrl) {
-    modalPosterUrl.value = movie.poster || "";
-  }
-
-  // Popula as pills de categoria (modo visualização)
   modalCategories.innerHTML = "";
-  // 🎯 Traduzindo Pills
   const categoryTexts = textMap[currentLang];
   (movie.categories || []).forEach(c => {
     const x = document.createElement("span");
@@ -1143,66 +1305,44 @@ function openMainModal(movie, editable = false) {
     modalCategories.appendChild(x);
   });
 
-  // Popula os checkboxes de categoria (modo edição)
   modalCategorySelectContainer.innerHTML = "";
   [...categoriesSet].sort().forEach(c => {
     const lbl = document.createElement("label");
-    // Adicionamos as classes de edição aqui
-    lbl.className = "flex items-center gap-2 cursor-pointer px-2 py-1 bg-neutral-700 rounded mr-2 mb-2 edit-element-flex"; 
+    lbl.className = "flex items-center gap-2 cursor-pointer px-2 py-1 bg-neutral-700 rounded mr-2 mb-2 edit-element-flex";
     lbl.innerHTML = `
-      <input type="checkbox" value="${c}" ${
-      (movie.categories || []).includes(c) ? "checked" : ""
-    } />
+      <input type="checkbox" value="${c}" ${(movie.categories || []).includes(c) ? "checked" : ""} />
       <span class="text-sm">${categoryTexts[c] || c}</span>
     `;
     modalCategorySelectContainer.appendChild(lbl);
   });
 
-  btnSaveMovie.onclick = () => saveModalChanges();
+  btnSaveMovie.onclick   = () => saveModalChanges();
   btnDeleteMovie.onclick = () => deleteMovieConfirm(editingId);
-
   mainModal.classList.remove("hidden");
 }
 
 /* ---------------- SAVE EDIT ---------------- */
-
 async function saveModalChanges() {
   if (!editingId) return;
-
-  const cats = Array.from(
-    modalCategorySelectContainer.querySelectorAll("input[type=checkbox]:checked")
-  ).map(i => i.value);
-
-  // 🎯 Pega a URL do novo input de texto, se existir.
+  const cats = Array.from(modalCategorySelectContainer.querySelectorAll("input[type=checkbox]:checked")).map(i => i.value);
   const newPosterUrl = modalPosterUrl ? modalPosterUrl.value.trim() : modalPoster.src || "";
-  
-  const newTitle = modalTitle.textContent.trim(); 
+  const newTitle = modalTitle.textContent.trim();
   const movieToUpdate = movies.find(m => m.id === editingId);
-  
-  // 🎯 Lógica para salvar o Título Original:
-  // Se o idioma ATUAL for EN-US, o que o usuário vê é o Título Original (newTitle).
-  // Se o idioma for PT-BR, o Título Original deve ser mantido se já existir, senão usa o newTitle.
-  const originalTitleToSave = (currentLang === 'en-US') 
-                              ? newTitle 
-                              : (movieToUpdate.originalTitle || movieToUpdate.title);
-  
+  const originalTitleToSave = currentLang === "en-US" ? newTitle : movieToUpdate.originalTitle || movieToUpdate.title;
   try {
     const ref = doc(db, "users", userId, "movies", editingId);
-
-    const updated = {
-      // 🎯 Salva o título no campo 'title' (o campo primário)
-      title: newTitle, 
+    await updateDoc(ref, {
+      title: newTitle,
       description: modalSinopse.value.trim(),
       categories: cats,
-      // rating: modalRating.value ? Number(modalRating.value) : null, // <--- REMOVIDO
       streamingUrl: modalStreaming.value || null,
       remember: rememberStreaming.checked,
       poster: newPosterUrl,
-      originalTitle: originalTitleToSave // 🎯 SALVA O ORIGINAL TITLE
-    };
-
-    await updateDoc(ref, updated);
-
+      originalTitle: originalTitleToSave,
+      tmdbId: movieToUpdate.tmdbId || "",
+      mediaType: movieToUpdate.mediaType || "movie",  // 📺 preserva tipo ao editar
+      favorite: movieToUpdate.favorite || false
+    });
     showToast("Alterações salvas!", "success");
     mainModal.classList.add("hidden");
     await loadMovies();
@@ -1213,16 +1353,10 @@ async function saveModalChanges() {
 }
 
 /* ---------------- DELETE MOVIE ---------------- */
-
-// 🎯 FUNÇÃO DE EXCLUSÃO ÚNICA AGORA USA O MODAL CUSTOMIZADO
 async function deleteMovieConfirm(id) {
   if (!id) return;
-  
-  const message = `Deseja realmente excluir esse filme?`;
-  const confirmed = await showCustomConfirm("Confirmação de Exclusão", message, "Excluir");
-
+  const confirmed = await showCustomConfirm("Confirmação de Exclusão", "Deseja realmente excluir esse filme?", "Excluir");
   if (!confirmed) return;
-
   try {
     await deleteDoc(doc(db, "users", userId, "movies", id));
     showToast("Filme excluído", "success");
@@ -1233,60 +1367,38 @@ async function deleteMovieConfirm(id) {
     showToast("Erro ao excluir", "error");
   }
 }
+
 /* ============================================================
-                EDIÇÃO DO POSTER (MODAL PRINCIPAL)
+              EDIÇÃO DO POSTER (MODAL PRINCIPAL)
 ============================================================ */
-
 async function handleEditFetchPoster() {
-  const title = modalTitle.textContent.trim(); 
+  const title = modalTitle.textContent.trim();
   if (!title) return showToast("Erro: Título do modal está vazio", "warning");
-
   showToast("Buscando detalhes do filme e pôster...");
   const searchResults = await searchMoviesTMDb(title);
-  if (!searchResults || searchResults.length === 0) {
-    return showToast("Nenhum filme encontrado na TMDb com esse título.", "warning");
-  }
-
+  if (!searchResults || searchResults.length === 0) return showToast("Nenhum filme encontrado na TMDb com esse título.", "warning");
   const movieId = searchResults[0].id;
-  // 🎯 Busca com o idioma ativo
-  const movieDetails = await fetchMovieDetailsTMDb(movieId, currentLang); 
-  
-  const posterUrl = movieDetails.poster_path ? `${TMDB_IMG_BASE_URL}${movieDetails.poster_path}` : '';
-
+  const movieDetails = await fetchMovieDetailsTMDb(movieId, currentLang);
+  const posterUrl = movieDetails.poster_path ? `${TMDB_IMG_BASE_URL}${movieDetails.poster_path}` : "";
   if (movieDetails) {
-    // 🎯 TÍTULO PRIMÁRIO para o campo 'title' do Firebase
     const apiTitle = movieDetails.title || movieDetails.original_title || "";
-    
-    // 🎯 SALVA O TÍTULO ORIGINAL, se existir, senão usa o traduzido
     tmpOriginalTitle = movieDetails.original_title || apiTitle;
-
-    // Preenche o título com o nome oficial (em PT-BR, se houver)
-    modalTitle.textContent = apiTitle; 
+    tmpTmdbId = String(movieId);
+    modalTitle.textContent = apiTitle;
     modalSinopse.value = movieDetails.overview || "Sinopse não disponível.";
-    
     modalPoster.src = posterUrl;
-    // 🎯 Atualiza o novo campo de input com a URL buscada
-    if (modalPosterUrl) {
-        modalPosterUrl.value = posterUrl;
-    }
-    
+    if (modalPosterUrl) modalPosterUrl.value = posterUrl;
     const newCategories = movieDetails.genres ? movieDetails.genres.map(g => g.name) : [];
     newCategories.forEach(c => categoriesSet.add(c));
-    rebuildCategoryOptions(); // Atualiza os filtros globais
-
-    // Atualiza as categorias no modal de edição
+    rebuildCategoryOptions();
     const categoryTexts = textMap[currentLang];
     modalCategorySelectContainer.innerHTML = "";
     [...categoriesSet].sort().forEach(c => {
-        const lbl = document.createElement("label");
-        lbl.className = "flex items-center gap-2 cursor-pointer px-2 py-1 bg-neutral-700 rounded mr-2 mb-2 edit-element-flex";
-        lbl.innerHTML = `
-        <input type="checkbox" value="${c}" ${newCategories.includes(c) ? "checked" : ""} />
-        <span class="text-sm">${categoryTexts[c] || c}</span>
-        `;
-        modalCategorySelectContainer.appendChild(lbl);
+      const lbl = document.createElement("label");
+      lbl.className = "flex items-center gap-2 cursor-pointer px-2 py-1 bg-neutral-700 rounded mr-2 mb-2 edit-element-flex";
+      lbl.innerHTML = `<input type="checkbox" value="${c}" ${newCategories.includes(c) ? "checked" : ""} /><span class="text-sm">${categoryTexts[c] || c}</span>`;
+      modalCategorySelectContainer.appendChild(lbl);
     });
-
     showToast("Filme preenchido!", "success");
   } else {
     showToast("Nenhum pôster ou detalhes encontrados para o título.", "warning");
@@ -1296,16 +1408,10 @@ async function handleEditFetchPoster() {
 async function handleEditPosterUpload(e) {
   const file = e.target.files?.[0];
   if (!file) return;
-
   try {
     const data = await fileToDataURL(file);
-    modalPoster.src = data; 
-    
-    // 🎯 Limpa o campo de URL ao fazer upload de arquivo
-    if (modalPosterUrl) {
-        modalPosterUrl.value = data; 
-    }
-    
+    modalPoster.src = data;
+    if (modalPosterUrl) modalPosterUrl.value = data;
     showToast("Upload do pôster concluído!");
   } catch (err) {
     console.error("Erro no upload:", err);
@@ -1314,153 +1420,82 @@ async function handleEditPosterUpload(e) {
 }
 
 function handleEditRemovePoster() {
-  modalPoster.src = ""; 
-  // 🎯 Limpa o campo de URL ao remover o pôster
-  if (modalPosterUrl) {
-      modalPosterUrl.value = "";
-  }
+  modalPoster.src = "";
+  if (modalPosterUrl) modalPosterUrl.value = "";
   showToast("Pôster removido");
 }
 
 /* ---------------- GLOBAL EVENTS ---------------- */
-
-// [MELHORIA 5] Função 'attachGlobalEvents' MODIFICADA (Pedidos 3 e 4)
 function attachGlobalEvents() {
-  
   const searchInput = document.querySelector("#searchInput");
   if (searchInput) searchInput.oninput = () => renderMovies();
 
   window.addEventListener("keydown", e => {
     if (e.key === "Escape") {
-      if (mainModal && !mainModal.classList.contains("hidden"))
-        mainModal.classList.add("hidden");
-
+      const playerModal = $("playerModal");
+      if (playerModal && playerModal.style.display === "flex") { closePlayerModal(); return; }
+      if (mainModal && !mainModal.classList.contains("hidden")) mainModal.classList.add("hidden");
       const addModal = $("addModal");
-      if (addModal && !addModal.classList.contains("hidden"))
-        addModal.classList.add("hidden");
-        
-      // 🎯 Fecha modal customizado no ESC
-      if (confirmDialog && !confirmDialog.classList.contains("hidden")) {
-          confirmDialog.classList.add('hidden');
-      }
+      if (addModal && !addModal.classList.contains("hidden")) addModal.classList.add("hidden");
+      if (confirmDialog && !confirmDialog.classList.contains("hidden")) confirmDialog.classList.add("hidden");
     }
   });
 
-  // 🎯 EVENTOS DO MODO DE SELEÇÃO
   const toggleBtn = $("toggleSelectModeBtn");
-  if (toggleBtn) {
-    toggleBtn.onclick = toggleMultiSelectMode;
-  }
-  
-  // 🎯 CRIA O BOTÃO FLUTUANTE DE EXCLUSÃO
-  deleteSelectedBtn = document.createElement('button');
-  deleteSelectedBtn.id = 'deleteSelectedBtn';
+  if (toggleBtn) toggleBtn.onclick = toggleMultiSelectMode;
+
+  deleteSelectedBtn = document.createElement("button");
+  deleteSelectedBtn.id = "deleteSelectedBtn";
   deleteSelectedBtn.textContent = textMap[currentLang].delete_selected + " (0)";
-  deleteSelectedBtn.className = 'fixed bottom-6 left-6 bg-red-700 text-white px-5 py-3 rounded-full shadow-xl hover:scale-105 hidden z-40';
+  deleteSelectedBtn.className = "fixed bottom-6 left-6 bg-red-700 text-white px-5 py-3 rounded-full shadow-xl hover:scale-105 hidden z-40";
   deleteSelectedBtn.onclick = deleteSelectedMoviesConfirm;
   document.body.appendChild(deleteSelectedBtn);
-  
-  // 🎯 NOVO EVENTO: Pré-visualizar URL no modal de edição
-  if (modalPosterUrl) {
-      modalPosterUrl.oninput = (e) => {
-          modalPoster.src = e.target.value;
-      };
-  }
-  
-  // 🎯 EVENTO DE MUDANÇA DE IDIOMA
-  const langBtn = $("toggleLanguageBtn");
-  if (langBtn) {
-    langBtn.onclick = toggleLanguage;
-  }
 
-  // [CORREÇÃO] Adiciona evento para o 'X' do modal principal
-  if (closeModalBtn) {
-    closeModalBtn.onclick = () => {
-      mainModal.classList.add("hidden");
-      editingId = null;
-    };
-  }
-  
-  // [MELHORIA 5] Fechar modal ao clicar fora (Pedido 3)
-  if (mainModal) {
-    mainModal.onclick = (e) => {
-      // Se o alvo do clique for o próprio fundo do modal
-      if (e.target === mainModal) {
-        mainModal.classList.add("hidden");
-        editingId = null;
+  if (modalPosterUrl) modalPosterUrl.oninput = (e) => { modalPoster.src = e.target.value; };
+  const langBtn = $("toggleLanguageBtn");
+  if (langBtn) langBtn.onclick = toggleLanguage;
+  if (closeModalBtn) closeModalBtn.onclick = () => { mainModal.classList.add("hidden"); editingId = null; };
+  if (mainModal) mainModal.onclick = (e) => { if (e.target === mainModal) { mainModal.classList.add("hidden"); editingId = null; } };
+
+  if (btnGerarSinopse) {
+    btnGerarSinopse.onclick = async () => {
+      const title = modalTitle.textContent.trim();
+      if (!title) return showToast("O título está vazio.", "warning");
+      showToast("Buscando sinopse padrão (PT-BR)...");
+      const searchResults = await searchMoviesTMDb(title, "pt-BR");
+      if (!searchResults || searchResults.length === 0) return showToast("Filme não encontrado na API.", "error");
+      const movieId = searchResults[0].id;
+      const movieDetails = await fetchMovieDetailsTMDb(movieId, "pt-BR");
+      if (movieDetails && movieDetails.overview) {
+        modalSinopse.value = movieDetails.overview;
+        modalSinopse.dataset.lang = "pt-BR";
+        showToast("Sinopse padrão (PT-BR) carregada!", "success");
+      } else {
+        showToast("Sinopse padrão não encontrada.", "warning");
       }
     };
   }
-  
-  // [CORREÇÃO DO BUG] Adicionando os eventos que faltavam (Bug 1 e 2)
-  if (btnGerarSinopse) {
-      btnGerarSinopse.onclick = async () => {
-        const title = modalTitle.textContent.trim();
-        if (!title) return showToast("O título está vazio.", "warning");
-        
-        showToast("Buscando sinopse padrão (PT-BR)...");
-        
-        // 1. Acha o filme pelo título atual
-        const searchResults = await searchMoviesTMDb(title, 'pt-BR');
-        if (!searchResults || searchResults.length === 0) {
-            return showToast("Filme não encontrado na API.", "error");
-        }
-        
-        const movieId = searchResults[0].id;
-        
-        // 2. Busca os detalhes em pt-BR (o padrão)
-        const movieDetails = await fetchMovieDetailsTMDb(movieId, 'pt-BR');
-        
-        if (movieDetails && movieDetails.overview) {
-          modalSinopse.value = movieDetails.overview;
-          modalSinopse.dataset.lang = 'pt-BR'; // Reseta o idioma
-          showToast("Sinopse padrão (PT-BR) carregada!", "success");
-        } else {
-          showToast("Sinopse padrão não encontrada.", "warning");
-        }
-      };
-  }
 
-  if (btnLimparSinopse) {
-      btnLimparSinopse.onclick = () => {
-        modalSinopse.value = "";
-        showToast("Sinopse limpa");
-      };
-  }
+  if (btnLimparSinopse) btnLimparSinopse.onclick = () => { modalSinopse.value = ""; showToast("Sinopse limpa"); };
 
-  // [MELHORIA 5] Traduzir Sinopse (Pedido 4)
   if (btnTranslateSinopse) {
     btnTranslateSinopse.onclick = async () => {
-      if (!editingId) return; // Precisa ter um filme carregado
-
-      const currentLang = modalSinopse.dataset.lang || 'pt-BR';
-      const targetLang = currentLang === 'pt-BR' ? 'en-US' : 'pt-BR';
-      
+      if (!editingId) return;
+      const currentSynopsisLang = modalSinopse.dataset.lang || "pt-BR";
+      const targetLang = currentSynopsisLang === "pt-BR" ? "en-US" : "pt-BR";
       showToast(`Traduzindo para ${targetLang}...`);
-      
-      // 1. Pega o ID TMDb do filme atual (temos que buscar pelo título)
       const currentTitle = $("modalTitle").textContent;
-      // Tenta buscar primeiro no idioma alvo (ex: se o título está em EN, busca em EN)
       let searchResults = await searchMoviesTMDb(currentTitle, targetLang);
-      
       if (!searchResults || searchResults.length === 0) {
-           // Se falhar, tenta buscar no idioma oposto
-           searchResults = await searchMoviesTMDb(currentTitle, currentLang);
-           if (!searchResults || searchResults.length === 0) {
-                return showToast("Erro: Não foi possível encontrar o filme para traduzir.", "error");
-           }
+        searchResults = await searchMoviesTMDb(currentTitle, currentSynopsisLang);
+        if (!searchResults || searchResults.length === 0) return showToast("Erro: Não foi possível encontrar o filme para traduzir.", "error");
       }
-      
-      const tmdb_id = searchResults[0].id; // Pega o ID do primeiro resultado
-
-      // 2. Busca os detalhes no novo idioma
+      const tmdb_id = searchResults[0].id;
       const movieDetails = await fetchMovieDetailsTMDb(tmdb_id, targetLang);
-      
       if (movieDetails) {
-        // [CORREÇÃO] Atualiza o título e a sinopse
-        modalTitle.textContent = movieDetails.title; 
+        modalTitle.textContent = movieDetails.title;
         modalSinopse.value = movieDetails.overview || "Tradução da sinopse não encontrada.";
-        modalSinopse.dataset.lang = targetLang; // Salva o idioma atual
+        modalSinopse.dataset.lang = targetLang;
         showToast(`Título e Sinopse atualizados para ${targetLang}!`, "success");
       } else {
         showToast("Tradução não encontrada.", "warning");
@@ -1468,28 +1503,15 @@ function attachGlobalEvents() {
     };
   }
 
-  if (modalFetchPoster) {
-    // Esta é a função do modal de EDIÇÃO
-    modalFetchPoster.onclick = handleEditFetchPoster;
-  }
-  if (modalUploadBtn) {
-    modalUploadBtn.onclick = () => modalUploadInput.click();
-  }
-  if (modalUploadInput) {
-    modalUploadInput.onchange = handleEditPosterUpload;
-  }
-  if (modalRemovePoster) {
-    modalRemovePoster.onclick = handleEditRemovePoster;
-  }
+  if (modalFetchPoster)  modalFetchPoster.onclick = handleEditFetchPoster;
+  if (modalUploadBtn)    modalUploadBtn.onclick    = () => modalUploadInput.click();
+  if (modalUploadInput)  modalUploadInput.onchange = handleEditPosterUpload;
+  if (modalRemovePoster) modalRemovePoster.onclick  = handleEditRemovePoster;
 
   if (logoutBtn) {
     logoutBtn.onclick = async () => {
-      try {
-        await signOut(auth);
-      } catch (e) {
-        console.error("Erro ao sair:", e);
-        showToast("Erro ao tentar sair.", "error");
-      }
+      try { await signOut(auth); }
+      catch (e) { console.error("Erro ao sair:", e); showToast("Erro ao tentar sair.", "error"); }
     };
   }
 }
@@ -1497,118 +1519,74 @@ function attachGlobalEvents() {
 /* ============================================================
              MODAL DE CONFIRMAÇÃO CUSTOMIZADO
 ============================================================ */
-/**
- * Exibe um modal de confirmação customizado no lugar do window.confirm.
- * @param {string} title Título do modal.
- * @param {string} message Mensagem de confirmação.
- * @param {string} okText Texto do botão OK.
- * @returns {Promise<boolean>} Retorna true se OK for clicado, false se Cancel.
- */
 function showCustomConfirm(title, message, okText = "Confirmar") {
-    return new Promise(resolve => {
-        if (!confirmDialog) {
-            // Fallback se o modal não for encontrado
-            return resolve(window.confirm(message));
-        }
-
-        confirmTitle.textContent = title;
-        confirmMessage.textContent = message;
-        confirmOKBtn.textContent = okText;
-
-        confirmDialog.classList.remove('hidden');
-
-        // Garante que o modal feche e resolva a promessa
-        const cleanup = (result) => {
-            confirmDialog.classList.add('hidden');
-            confirmOKBtn.onclick = null;
-            confirmCancelBtn.onclick = null;
-            resolve(result);
-        };
-
-        // Evento OK
-        confirmOKBtn.onclick = () => cleanup(true);
-
-        // Evento Cancelar (ou fechar ao clicar fora, se quiser)
-        confirmCancelBtn.onclick = () => cleanup(false);
-    });
+  return new Promise(resolve => {
+    if (!confirmDialog) return resolve(window.confirm(message));
+    confirmTitle.textContent   = title;
+    confirmMessage.textContent = message;
+    confirmOKBtn.textContent   = okText;
+    confirmDialog.classList.remove("hidden");
+    const cleanup = (result) => {
+      confirmDialog.classList.add("hidden");
+      confirmOKBtn.onclick = null;
+      confirmCancelBtn.onclick = null;
+      resolve(result);
+    };
+    confirmOKBtn.onclick     = () => cleanup(true);
+    confirmCancelBtn.onclick = () => cleanup(false);
+  });
 }
-
 
 /* ============================================================
             LÓGICA DE EXCLUSÃO MÚLTIPLA
 ============================================================ */
-/**
- * Alterna entre o modo de visualização normal e o modo de seleção múltipla.
- */
 function toggleMultiSelectMode() {
-    multiSelectMode = !multiSelectMode;
-    selectedMovies.clear();
-    
-    const texts = textMap[currentLang];
-    const toggleBtn = $("toggleSelectModeBtn");
-    
-    if (multiSelectMode) {
-        toggleBtn.textContent = texts.select_toggle_on;
-        toggleBtn.className = 'px-3 py-2 bg-red-600 text-white rounded flex-shrink-0';
-        $("addMovieFab").classList.add('hidden'); // Esconde o FAB de adição
-        deleteSelectedBtn.classList.remove('hidden'); // Mostra o botão de exclusão
-    } else {
-        toggleBtn.textContent = texts.select_toggle_off;
-        toggleBtn.className = 'px-3 py-2 bg-neutral-700 text-white rounded flex-shrink-0';
-        $("addMovieFab").classList.remove('hidden'); // Mostra o FAB de adição
-        deleteSelectedBtn.classList.add('hidden'); // Esconde o botão de exclusão
-    }
-    
-    updateDeleteSelectedButton();
-    renderMovies(); // Renderiza novamente para mostrar/esconder os checkboxes
+  multiSelectMode = !multiSelectMode;
+  selectedMovies.clear();
+  const texts = textMap[currentLang];
+  const toggleBtn = $("toggleSelectModeBtn");
+  if (multiSelectMode) {
+    toggleBtn.textContent = texts.select_toggle_on;
+    toggleBtn.className = "px-3 py-2 bg-red-600 text-white rounded flex-shrink-0";
+    $("addMovieFab").classList.add("hidden");
+    deleteSelectedBtn.classList.remove("hidden");
+  } else {
+    toggleBtn.textContent = texts.select_toggle_off;
+    toggleBtn.className = "px-3 py-2 bg-neutral-700 text-white rounded flex-shrink-0";
+    $("addMovieFab").classList.remove("hidden");
+    deleteSelectedBtn.classList.add("hidden");
+  }
+  updateDeleteSelectedButton();
+  renderMovies();
 }
 
-/**
- * Atualiza o texto e estado (disabled) do botão de exclusão múltipla.
- */
 function updateDeleteSelectedButton() {
-    const texts = textMap[currentLang];
-    deleteSelectedBtn.textContent = `${texts.delete_selected} (${selectedMovies.size})`;
-    deleteSelectedBtn.disabled = selectedMovies.size === 0;
+  const texts = textMap[currentLang];
+  deleteSelectedBtn.textContent = `${texts.delete_selected} (${selectedMovies.size})`;
+  deleteSelectedBtn.disabled = selectedMovies.size === 0;
 }
 
-/**
- * Confirma e executa a exclusão de todos os filmes selecionados.
- */
-// 🎯 FUNÇÃO DE EXCLUSÃO MÚLTIPLA AGORA USA O MODAL CUSTOMIZADO
 async function deleteSelectedMoviesConfirm() {
-    if (selectedMovies.size === 0) return showToast("Selecione pelo menos um filme.", "warning");
-    
-    const message = `Deseja realmente excluir ${selectedMovies.size} filme(s)?`;
-    const confirmed = await showCustomConfirm("Confirmação de Exclusão", message, "Excluir");
-    
-    if (!confirmed) return;
-    
-    try {
-        let deletedCount = 0;
-        const promises = [];
-        
-        selectedMovies.forEach(movieId => {
-            const ref = doc(db, "users", userId, "movies", movieId);
-            promises.push(deleteDoc(ref).then(() => { deletedCount++; }));
-        });
-        
-        await Promise.all(promises);
-        
-        showToast(`${deletedCount} filme(s) excluído(s) com sucesso!`, "success");
-        
-        // Finaliza o modo de seleção e recarrega os filmes
-        toggleMultiSelectMode(); 
-        await loadMovies();
-
-    } catch (e) {
-        console.error(e);
-        showToast("Erro ao excluir filmes selecionados.", "error");
-    }
+  if (selectedMovies.size === 0) return showToast("Selecione pelo menos um filme.", "warning");
+  const message = `Deseja realmente excluir ${selectedMovies.size} filme(s)?`;
+  const confirmed = await showCustomConfirm("Confirmação de Exclusão", message, "Excluir");
+  if (!confirmed) return;
+  try {
+    let deletedCount = 0;
+    const promises = [];
+    selectedMovies.forEach(movieId => {
+      const ref = doc(db, "users", userId, "movies", movieId);
+      promises.push(deleteDoc(ref).then(() => { deletedCount++; }));
+    });
+    await Promise.all(promises);
+    showToast(`${deletedCount} filme(s) excluído(s) com sucesso!`, "success");
+    toggleMultiSelectMode();
+    await loadMovies();
+  } catch (e) {
+    console.error(e);
+    showToast("Erro ao excluir filmes selecionados.", "error");
+  }
 }
 
 /* ---------------- DEBUG ---------------- */
-window.__movieApp = {
-  getMovies: () => movies,
-  reload: loadMovies
-};
+window.__movieApp = { getMovies: () => movies, reload: loadMovies };
