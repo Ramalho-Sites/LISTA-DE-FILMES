@@ -159,6 +159,15 @@ function normalizeCategory(cat) {
   return cat.trim().charAt(0).toUpperCase() + cat.trim().slice(1);
 }
 
+/* 🚀 Debounce — agrupa chamadas rápidas em uma só */
+function debounce(fn, delay) {
+  let timer;
+  return function(...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
+
 const textMap = {
   "pt-BR": {
     brand:"Meus Filmes", select_toggle_off:"Selecionar", select_toggle_on:"Cancelar Seleção",
@@ -243,13 +252,11 @@ function startRealtimeSync() {
     movies = [];
     snap.forEach(d => {
       const data = d.data();
-      // 🧹 Normaliza categorias ao carregar
       const cats = (data.categories || []).map(normalizeCategory).filter(Boolean);
       movies.push({ id: d.id, ...data, categories: cats });
       cats.forEach(c => categoriesSet.add(c));
     });
-    renderMovies();
-    rebuildCategoryOptions();
+    debouncedRender();
   }, (err) => {
     console.error("Erro no sync:", err);
     showToast("Erro ao sincronizar filmes", "error");
@@ -258,10 +265,15 @@ function startRealtimeSync() {
 
 /* ---- loadMovies mantido para compatibilidade (usado em alguns saves) ---- */
 async function loadMovies() {
-  // Com onSnapshot ativo, apenas força re-render local
   renderMovies();
   rebuildCategoryOptions();
 }
+
+/* 🚀 Versão debounced do renderMovies — evita renders em cascata */
+const debouncedRender = debounce(() => {
+  renderMovies();
+  rebuildCategoryOptions();
+}, 80);
 
 /* ============================================================
    PLAYER
@@ -1243,7 +1255,7 @@ function handleEditRemovePoster() {
 /* ---- GLOBAL EVENTS ---- */
 function attachGlobalEvents() {
   const si = document.querySelector("#searchInput");
-  if (si) si.oninput = () => renderMovies();
+  if (si) si.oninput = debounce(() => renderMovies(), 120);
 
   window.addEventListener("keydown", e => {
     if (e.key === "Escape") {
