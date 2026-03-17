@@ -99,6 +99,15 @@ async function fetchTVDetailsTMDb(id, lang = TMDB_LANGUAGE) {
     return d?.id ? d : null;
   } catch(e) { return null; }
 }
+
+// 📺 Busca quantos episódios tem uma temporada específica
+async function fetchTVSeasonDetails(tvId, season) {
+  try {
+    const r = await fetch(`https://api.themoviedb.org/3/tv/${tvId}/season/${season}?api_key=${TMDB_API_KEY}&language=${TMDB_LANGUAGE}`);
+    const d = await r.json();
+    return d?.episodes ? d : null;
+  } catch(e) { return null; }
+}
 async function loadGenresTMDb() {
   try {
     const r = await fetch(`https://api.themoviedb.org/3/genre/movie/list?api_key=${TMDB_API_KEY}&language=${TMDB_LANGUAGE}`);
@@ -136,6 +145,9 @@ let tmpOriginalTitle = "", tmpTmdbId = "";
 let currentPlayerIndex = 0;
 let playingTmdbId = "", playingMovieId = "";
 let playingSeason = 1, playingEpisode = 1;
+// 📺 Dados da série em reprodução (para limitar inputs e botão próximo)
+let playingTotalSeasons = 0;
+let playingTotalEpisodes = 0;
 let showOnlyFavorites = false;
 let addMediaType = "movie";
 // 🔄 unsubscribe do onSnapshot
@@ -281,16 +293,51 @@ function createPlayerModal() {
           transform:translate(-50%,-50%);color:#aaa;font-size:14px;pointer-events:none;">
           Carregando player...</div>
       </div>
-      <div id="playerEpisodeRow" style="display:none;align-items:center;gap:10px;
-        padding:8px 16px;background:#141414;border-top:1px solid #222;flex-wrap:wrap;">
-        <span style="color:#aaa;font-size:13px;">Temporada:</span>
-        <input id="playerSeasonInput" type="number" min="1" value="1"
-          style="width:60px;padding:3px 6px;border-radius:5px;background:#222;color:#fff;border:1px solid #444;font-size:13px;"/>
-        <span style="color:#aaa;font-size:13px;">Episódio:</span>
-        <input id="playerEpisodeInput" type="number" min="1" value="1"
-          style="width:60px;padding:3px 6px;border-radius:5px;background:#222;color:#fff;border:1px solid #444;font-size:13px;"/>
-        <button onclick="window.__loadEpisode()" style="padding:4px 14px;border-radius:6px;
-          border:none;background:#4f46e5;color:#fff;font-size:12px;font-weight:bold;cursor:pointer;">▶ Ir</button>
+      <div id="playerEpisodeRow" style="display:none;align-items:center;gap:8px;
+        padding:10px 16px;background:#141414;border-top:1px solid #222;flex-wrap:wrap;">
+
+        <!-- Seletor de Temporada -->
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="color:#888;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Temp.</span>
+          <div style="display:flex;align-items:center;background:#222;border:1px solid #444;border-radius:8px;overflow:hidden;">
+            <button onclick="window.__stepSeason(-1)" style="background:none;border:none;color:#aaa;
+              padding:4px 8px;cursor:pointer;font-size:14px;line-height:1;">‹</button>
+            <input id="playerSeasonInput" type="number" min="1" value="1"
+              style="width:36px;background:none;border:none;color:#fff;font-size:13px;
+              font-weight:700;text-align:center;padding:4px 0;outline:none;"/>
+            <button onclick="window.__stepSeason(1)" style="background:none;border:none;color:#aaa;
+              padding:4px 8px;cursor:pointer;font-size:14px;line-height:1;">›</button>
+          </div>
+        </div>
+
+        <!-- Seletor de Episódio -->
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="color:#888;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Ep.</span>
+          <div style="display:flex;align-items:center;background:#222;border:1px solid #444;border-radius:8px;overflow:hidden;">
+            <button onclick="window.__stepEpisode(-1)" style="background:none;border:none;color:#aaa;
+              padding:4px 8px;cursor:pointer;font-size:14px;line-height:1;">‹</button>
+            <input id="playerEpisodeInput" type="number" min="1" value="1"
+              style="width:36px;background:none;border:none;color:#fff;font-size:13px;
+              font-weight:700;text-align:center;padding:4px 0;outline:none;"/>
+            <button onclick="window.__stepEpisode(1)" style="background:none;border:none;color:#aaa;
+              padding:4px 8px;cursor:pointer;font-size:14px;line-height:1;">›</button>
+          </div>
+        </div>
+
+        <!-- Info de total (ex: "de 10 ep") -->
+        <span id="playerEpInfo" style="color:#555;font-size:11px;"></span>
+
+        <!-- Botão Ir -->
+        <button onclick="window.__loadEpisode()" style="padding:5px 14px;border-radius:8px;
+          border:none;background:#4f46e5;color:#fff;font-size:12px;
+          font-weight:bold;cursor:pointer;transition:background 0.2s;">▶ Ir</button>
+
+        <!-- Botão Próximo Episódio -->
+        <button onclick="window.__nextEpisode()" id="playerNextBtn" style="padding:5px 14px;border-radius:8px;
+          border:none;background:#16a34a;color:#fff;font-size:12px;
+          font-weight:bold;cursor:pointer;margin-left:auto;transition:background 0.2s;">
+          Próximo ▶▶
+        </button>
       </div>
       <div style="display:flex;align-items:center;gap:8px;padding:10px 16px;
         background:#1a1a1a;flex-wrap:wrap;border-top:1px solid #333;">
@@ -331,6 +378,21 @@ async function openPlayerModal(movie) {
   playingMovieId = movie.id || "";
   currentPlayerIndex = 0;
   currentMediaType = movie.mediaType || "movie";
+  playingTotalSeasons  = 0;
+  playingTotalEpisodes = 0;
+
+  // 📺 Busca dados da série para limitar inputs
+  if (currentMediaType === "tv") {
+    fetchTVDetailsTMDb(tmdbId).then(async details => {
+      if (details) {
+        playingTotalSeasons = details.number_of_seasons || 0;
+        // Busca episódios da temporada atual
+        const seasonData = await fetchTVSeasonDetails(tmdbId, playingSeason);
+        playingTotalEpisodes = seasonData?.episodes?.length || 0;
+        updateEpisodeInfo();
+      }
+    });
+  }
 
   let startSeason = 1, startEpisode = 1;
   if (currentMediaType === "tv" && movie.watchProgress?.season) {
@@ -354,6 +416,7 @@ async function openPlayerModal(movie) {
       const ei = $("playerEpisodeInput");
       if (si) si.value = startSeason;
       if (ei) ei.value = startEpisode;
+      updateEpisodeInfo();
     }
   }
   const titleEl = $("playerTitle");
@@ -368,8 +431,87 @@ window.__loadEpisode = function() {
   const s = parseInt($("playerSeasonInput")?.value) || 1;
   const e = parseInt($("playerEpisodeInput")?.value) || 1;
   playingSeason = s; playingEpisode = e;
-  if (playingTmdbId) loadPlayer(playingTmdbId, 0);
+  if (playingTmdbId) {
+    loadPlayer(playingTmdbId, currentPlayerIndex);
+    updateEpisodeInfo();
+  }
 };
+
+// ▶️ Avança/retrocede temporada com limites
+window.__stepSeason = function(delta) {
+  const input = $("playerSeasonInput");
+  if (!input) return;
+  let val = parseInt(input.value) + delta;
+  val = Math.max(1, playingTotalSeasons > 0 ? Math.min(val, playingTotalSeasons) : val);
+  input.value = val;
+  // Ao trocar temporada, busca total de episódios da nova temporada
+  fetchTVSeasonDetails(playingTmdbId, val).then(season => {
+    playingTotalEpisodes = season?.episodes?.length || 0;
+    updateEpisodeInfo();
+    // Reseta episódio para 1
+    const epInput = $("playerEpisodeInput");
+    if (epInput) epInput.value = 1;
+  });
+};
+
+// ▶️ Avança/retrocede episódio com limites
+window.__stepEpisode = function(delta) {
+  const input = $("playerEpisodeInput");
+  if (!input) return;
+  let val = parseInt(input.value) + delta;
+  val = Math.max(1, playingTotalEpisodes > 0 ? Math.min(val, playingTotalEpisodes) : val);
+  input.value = val;
+};
+
+// ▶️ Próximo episódio — pula para T+1 E1 se for o último ep da temporada
+window.__nextEpisode = async function() {
+  const si = $("playerSeasonInput");
+  const ei = $("playerEpisodeInput");
+  if (!si || !ei) return;
+
+  let season  = parseInt(si.value) || 1;
+  let episode = parseInt(ei.value) || 1;
+
+  // Verifica se é o último episódio da temporada
+  if (playingTotalEpisodes > 0 && episode >= playingTotalEpisodes) {
+    // Último episódio — tenta avançar para próxima temporada
+    if (playingTotalSeasons > 0 && season >= playingTotalSeasons) {
+      showToast("Você chegou ao fim da série! 🎉", "success");
+      return;
+    }
+    season  = season + 1;
+    episode = 1;
+    // Busca episódios da nova temporada
+    const newSeason = await fetchTVSeasonDetails(playingTmdbId, season);
+    playingTotalEpisodes = newSeason?.episodes?.length || 0;
+    si.value = season;
+    ei.value = episode;
+    showToast(`Temporada ${season}, Episódio 1`, "info");
+  } else {
+    episode = episode + 1;
+    ei.value = episode;
+  }
+
+  playingSeason  = season;
+  playingEpisode = episode;
+  loadPlayer(playingTmdbId, currentPlayerIndex);
+  updateEpisodeInfo();
+};
+
+// Atualiza o texto "de X ep" e o max dos inputs
+function updateEpisodeInfo() {
+  const info = $("playerEpInfo");
+  const si = $("playerSeasonInput");
+  const ei = $("playerEpisodeInput");
+  if (info) {
+    const parts = [];
+    if (playingTotalSeasons > 0) parts.push(`${playingTotalSeasons} temp.`);
+    if (playingTotalEpisodes > 0) parts.push(`${playingTotalEpisodes} ep.`);
+    info.textContent = parts.length ? `(${parts.join(" · ")})` : "";
+  }
+  if (si && playingTotalSeasons > 0) si.max = playingTotalSeasons;
+  if (ei && playingTotalEpisodes > 0) ei.max = playingTotalEpisodes;
+}
 
 async function closePlayerModal() {
   const modal = $("playerModal");
@@ -394,6 +536,7 @@ async function closePlayerModal() {
   playingTmdbId = ""; playingMovieId = "";
   currentPlayerIndex = 0; currentMediaType = "movie";
   playingSeason = 1; playingEpisode = 1;
+  playingTotalSeasons = 0; playingTotalEpisodes = 0;
   const epRow = $("playerEpisodeRow");
   if (epRow) epRow.style.display = "none";
 }
