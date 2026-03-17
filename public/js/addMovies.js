@@ -293,51 +293,57 @@ function createPlayerModal() {
           transform:translate(-50%,-50%);color:#aaa;font-size:14px;pointer-events:none;">
           Carregando player...</div>
       </div>
-      <div id="playerEpisodeRow" style="display:none;align-items:center;gap:8px;
+      <div id="playerEpisodeRow" style="display:none;align-items:center;gap:10px;
         padding:10px 16px;background:#141414;border-top:1px solid #222;flex-wrap:wrap;">
 
         <!-- Seletor de Temporada -->
         <div style="display:flex;align-items:center;gap:6px;">
-          <span style="color:#888;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Temp.</span>
-          <div style="display:flex;align-items:center;background:#222;border:1px solid #444;border-radius:8px;overflow:hidden;">
-            <button onclick="window.__stepSeason(-1)" style="background:none;border:none;color:#aaa;
-              padding:4px 8px;cursor:pointer;font-size:14px;line-height:1;">‹</button>
-            <input id="playerSeasonInput" type="number" min="1" value="1"
-              style="width:36px;background:none;border:none;color:#fff;font-size:13px;
-              font-weight:700;text-align:center;padding:4px 0;outline:none;"/>
-            <button onclick="window.__stepSeason(1)" style="background:none;border:none;color:#aaa;
-              padding:4px 8px;cursor:pointer;font-size:14px;line-height:1;">›</button>
+          <span style="color:#666;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;">Temp.</span>
+          <div style="display:flex;align-items:center;background:#1e1e1e;border:1px solid #333;border-radius:20px;overflow:hidden;">
+            <button onclick="window.__stepSeason(-1)" style="background:none;border:none;color:#666;
+              width:26px;height:28px;cursor:pointer;font-size:13px;display:flex;align-items:center;
+              justify-content:center;transition:color 0.15s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#666'">‹</button>
+            <span id="playerSeasonDisplay" style="color:#fff;font-size:13px;font-weight:700;
+              min-width:20px;text-align:center;user-select:none;">1</span>
+            <input id="playerSeasonInput" type="hidden" value="1"/>
+            <button onclick="window.__stepSeason(1)" style="background:none;border:none;color:#666;
+              width:26px;height:28px;cursor:pointer;font-size:13px;display:flex;align-items:center;
+              justify-content:center;transition:color 0.15s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#666'">›</button>
           </div>
         </div>
 
         <!-- Seletor de Episódio -->
         <div style="display:flex;align-items:center;gap:6px;">
-          <span style="color:#888;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">Ep.</span>
-          <div style="display:flex;align-items:center;background:#222;border:1px solid #444;border-radius:8px;overflow:hidden;">
-            <button onclick="window.__stepEpisode(-1)" style="background:none;border:none;color:#aaa;
-              padding:4px 8px;cursor:pointer;font-size:14px;line-height:1;">‹</button>
-            <input id="playerEpisodeInput" type="number" min="1" value="1"
-              style="width:36px;background:none;border:none;color:#fff;font-size:13px;
-              font-weight:700;text-align:center;padding:4px 0;outline:none;"/>
-            <button onclick="window.__stepEpisode(1)" style="background:none;border:none;color:#aaa;
-              padding:4px 8px;cursor:pointer;font-size:14px;line-height:1;">›</button>
+          <span style="color:#666;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;">Ep.</span>
+          <div style="display:flex;align-items:center;background:#1e1e1e;border:1px solid #333;border-radius:20px;overflow:hidden;">
+            <button onclick="window.__stepEpisode(-1)" style="background:none;border:none;color:#666;
+              width:26px;height:28px;cursor:pointer;font-size:13px;display:flex;align-items:center;
+              justify-content:center;transition:color 0.15s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#666'">‹</button>
+            <span id="playerEpisodeDisplay" style="color:#fff;font-size:13px;font-weight:700;
+              min-width:20px;text-align:center;user-select:none;">1</span>
+            <input id="playerEpisodeInput" type="hidden" value="1"/>
+            <button onclick="window.__stepEpisode(1)" style="background:none;border:none;color:#666;
+              width:26px;height:28px;cursor:pointer;font-size:13px;display:flex;align-items:center;
+              justify-content:center;transition:color 0.15s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#666'">›</button>
           </div>
         </div>
 
-        <!-- Info de total (ex: "de 10 ep") -->
+        <!-- Info dinâmica da temporada selecionada -->
         <span id="playerEpInfo" style="color:#555;font-size:11px;"></span>
 
         <!-- Botão Ir -->
-        <button onclick="window.__loadEpisode()" style="padding:5px 14px;border-radius:8px;
-          border:none;background:#4f46e5;color:#fff;font-size:12px;
-          font-weight:bold;cursor:pointer;transition:background 0.2s;">▶ Ir</button>
+        <button onclick="window.__loadEpisode()" style="padding:5px 16px;border-radius:20px;
+          border:1px solid #4f46e5;background:transparent;color:#a5b4fc;font-size:11px;
+          font-weight:700;cursor:pointer;letter-spacing:0.05em;transition:all 0.15s;"
+          onmouseover="this.style.background='#4f46e5';this.style.color='#fff'"
+          onmouseout="this.style.background='transparent';this.style.color='#a5b4fc'">▶ IR</button>
 
         <!-- Botão Próximo Episódio -->
-        <button onclick="window.__nextEpisode()" id="playerNextBtn" style="padding:5px 14px;border-radius:8px;
-          border:none;background:#16a34a;color:#fff;font-size:12px;
-          font-weight:bold;cursor:pointer;margin-left:auto;transition:background 0.2s;">
-          Próximo ▶▶
-        </button>
+        <button onclick="window.__nextEpisode()" id="playerNextBtn" style="padding:5px 16px;border-radius:20px;
+          border:1px solid #16a34a;background:transparent;color:#86efac;font-size:11px;
+          font-weight:700;cursor:pointer;letter-spacing:0.05em;margin-left:auto;transition:all 0.15s;"
+          onmouseover="this.style.background='#16a34a';this.style.color='#fff'"
+          onmouseout="this.style.background='transparent';this.style.color='#86efac'">PRÓXIMO ▶▶</button>
       </div>
       <div style="display:flex;align-items:center;gap:8px;padding:10px 16px;
         background:#1a1a1a;flex-wrap:wrap;border-top:1px solid #333;">
@@ -412,10 +418,8 @@ async function openPlayerModal(movie) {
   if (epRow) {
     epRow.style.display = currentMediaType === "tv" ? "flex" : "none";
     if (currentMediaType === "tv") {
-      const si = $("playerSeasonInput");
-      const ei = $("playerEpisodeInput");
-      if (si) si.value = startSeason;
-      if (ei) ei.value = startEpisode;
+      setSeasonValue(startSeason);
+      setEpisodeValue(startEpisode);
       updateEpisodeInfo();
     }
   }
@@ -437,59 +441,60 @@ window.__loadEpisode = function() {
   }
 };
 
+// Helpers para sincronizar input hidden e span de display
+function setSeasonValue(val) {
+  const input = $("playerSeasonInput");
+  const display = $("playerSeasonDisplay");
+  if (input) input.value = val;
+  if (display) display.textContent = val;
+}
+function setEpisodeValue(val) {
+  const input = $("playerEpisodeInput");
+  const display = $("playerEpisodeDisplay");
+  if (input) input.value = val;
+  if (display) display.textContent = val;
+}
+
 // ▶️ Avança/retrocede temporada com limites
 window.__stepSeason = function(delta) {
-  const input = $("playerSeasonInput");
-  if (!input) return;
-  let val = parseInt(input.value) + delta;
+  let val = (parseInt($("playerSeasonInput")?.value) || 1) + delta;
   val = Math.max(1, playingTotalSeasons > 0 ? Math.min(val, playingTotalSeasons) : val);
-  input.value = val;
+  setSeasonValue(val);
   // Ao trocar temporada, busca total de episódios da nova temporada
   fetchTVSeasonDetails(playingTmdbId, val).then(season => {
     playingTotalEpisodes = season?.episodes?.length || 0;
+    setEpisodeValue(1); // reseta episódio para 1
     updateEpisodeInfo();
-    // Reseta episódio para 1
-    const epInput = $("playerEpisodeInput");
-    if (epInput) epInput.value = 1;
   });
 };
 
 // ▶️ Avança/retrocede episódio com limites
 window.__stepEpisode = function(delta) {
-  const input = $("playerEpisodeInput");
-  if (!input) return;
-  let val = parseInt(input.value) + delta;
+  let val = (parseInt($("playerEpisodeInput")?.value) || 1) + delta;
   val = Math.max(1, playingTotalEpisodes > 0 ? Math.min(val, playingTotalEpisodes) : val);
-  input.value = val;
+  setEpisodeValue(val);
 };
 
 // ▶️ Próximo episódio — pula para T+1 E1 se for o último ep da temporada
 window.__nextEpisode = async function() {
-  const si = $("playerSeasonInput");
-  const ei = $("playerEpisodeInput");
-  if (!si || !ei) return;
+  let season  = parseInt($("playerSeasonInput")?.value)  || 1;
+  let episode = parseInt($("playerEpisodeInput")?.value) || 1;
 
-  let season  = parseInt(si.value) || 1;
-  let episode = parseInt(ei.value) || 1;
-
-  // Verifica se é o último episódio da temporada
   if (playingTotalEpisodes > 0 && episode >= playingTotalEpisodes) {
-    // Último episódio — tenta avançar para próxima temporada
     if (playingTotalSeasons > 0 && season >= playingTotalSeasons) {
       showToast("Você chegou ao fim da série! 🎉", "success");
       return;
     }
     season  = season + 1;
     episode = 1;
-    // Busca episódios da nova temporada
     const newSeason = await fetchTVSeasonDetails(playingTmdbId, season);
     playingTotalEpisodes = newSeason?.episodes?.length || 0;
-    si.value = season;
-    ei.value = episode;
+    setSeasonValue(season);
+    setEpisodeValue(episode);
     showToast(`Temporada ${season}, Episódio 1`, "info");
   } else {
     episode = episode + 1;
-    ei.value = episode;
+    setEpisodeValue(episode);
   }
 
   playingSeason  = season;
@@ -498,19 +503,16 @@ window.__nextEpisode = async function() {
   updateEpisodeInfo();
 };
 
-// Atualiza o texto "de X ep" e o max dos inputs
+// Atualiza o texto info e os limites
 function updateEpisodeInfo() {
   const info = $("playerEpInfo");
-  const si = $("playerSeasonInput");
-  const ei = $("playerEpisodeInput");
   if (info) {
+    const season = parseInt($("playerSeasonInput")?.value) || 1;
     const parts = [];
-    if (playingTotalSeasons > 0) parts.push(`${playingTotalSeasons} temp.`);
-    if (playingTotalEpisodes > 0) parts.push(`${playingTotalEpisodes} ep.`);
-    info.textContent = parts.length ? `(${parts.join(" · ")})` : "";
+    if (playingTotalSeasons  > 0) parts.push(`${playingTotalSeasons} temp.`);
+    if (playingTotalEpisodes > 0) parts.push(`T${season}: ${playingTotalEpisodes} ep.`);
+    info.textContent = parts.length ? parts.join(" · ") : "";
   }
-  if (si && playingTotalSeasons > 0) si.max = playingTotalSeasons;
-  if (ei && playingTotalEpisodes > 0) ei.max = playingTotalEpisodes;
 }
 
 async function closePlayerModal() {
