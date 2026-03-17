@@ -985,10 +985,150 @@ function showSkeletons(count = 12) {
 }
 
 /* ---- RENDER CARDS ---- */
+/* Cria um card novo do zero e registra seus eventos */
+function createMovieCard(m, texts) {
+  const card = document.createElement("div");
+  card.className = "poster-card relative";
+  card.dataset.movieId = m.id;
+
+  const isSelected = selectedMovies.has(m.id);
+  const desc = (m.description || "").substring(0, 120);
+  const displayTitle = escapeHtml(currentLang === "en-US" && m.originalTitle ? m.originalTitle : m.title);
+
+  const progressBadge = (m.mediaType === "tv" && m.watchProgress?.season)
+    ? `<div class="progress-badge" style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.82);
+        color:#fff;font-size:0.7rem;font-weight:700;padding:3px 7px;border-radius:5px;
+        border:1px solid rgba(255,255,255,0.15);pointer-events:none;letter-spacing:0.03em;">
+        T${m.watchProgress.season} E${m.watchProgress.episode}</div>` : "";
+
+  if (multiSelectMode) {
+    card.innerHTML += `<input type="checkbox" id="select-${m.id}"
+      class="absolute top-2 right-2 w-5 h-5 z-20 cursor-pointer checked:accent-red-600"
+      ${isSelected ? "checked" : ""} />`;
+    if (isSelected) card.classList.add("ring-4", "ring-red-600");
+  }
+
+  card.innerHTML += `
+    <div class="poster-link" style="position:relative;cursor:pointer;display:block;" title="▶ Assistir agora">
+      <img src="${m.poster}" class="poster-image" alt="${escapeHtml(m.title)}" loading="lazy" decoding="async" onerror="this.style.opacity='.3'" />
+      <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+        width:52px;height:52px;background:rgba(0,0,0,0.65);border-radius:50%;
+        display:flex;align-items:center;justify-content:center;
+        opacity:0;transition:opacity 0.2s;pointer-events:none;" class="play-overlay">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>
+      </div>
+      ${progressBadge}
+    </div>
+    <div class="poster-info">
+      <div><div class="poster-title">${displayTitle}</div>
+        <div class="poster-description">${escapeHtml(desc)}</div></div>
+      <div class="mt-3 flex justify-between items-center">
+        <button class="read-more-btn">${texts.read_more}</button>
+        <div class="flex items-center gap-2">
+          <button class="fav-btn-inline">${m.favorite ? "❤️" : "🤍"}</button>
+          <div class="actions-menu">
+            <button class="actions-menu-btn">...</button>
+            <div class="actions-dropdown">
+              <button class="edit-btn">Editar</button>
+              <button class="delete-btn">Excluir</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  card.querySelector(".fav-btn-inline").onclick = async (e) => {
+    e.stopPropagation();
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    await toggleFavorite(m.id, m.favorite || false);
+    btn.disabled = false;
+  };
+
+  const posterDiv = card.querySelector(".poster-link");
+  const playOverlay = card.querySelector(".play-overlay");
+  if (posterDiv && playOverlay) {
+    posterDiv.addEventListener("mouseenter", () => { playOverlay.style.opacity = "1"; });
+    posterDiv.addEventListener("mouseleave", () => { playOverlay.style.opacity = "0"; });
+  }
+
+  card.onclick = (e) => {
+    if (e.target.closest(".actions-menu") || e.target.closest(".actions-dropdown")) return;
+    if (e.target.closest(".fav-btn-inline")) return;
+    if (multiSelectMode) {
+      if (e.target.type === "checkbox") return;
+      if (selectedMovies.has(m.id)) selectedMovies.delete(m.id);
+      else selectedMovies.add(m.id);
+      updateDeleteSelectedButton(); renderMovies();
+    } else {
+      if (e.target.closest(".poster-link")) openPlayerModal(m);
+    }
+  };
+
+  const checkbox = card.querySelector(`#select-${m.id}`);
+  if (checkbox) {
+    checkbox.onclick = (e) => {
+      e.stopPropagation();
+      if (e.target.checked) selectedMovies.add(m.id);
+      else selectedMovies.delete(m.id);
+      updateDeleteSelectedButton(); renderMovies();
+    };
+  }
+
+  const menuBtn  = card.querySelector(".actions-menu-btn");
+  const dropdown = card.querySelector(".actions-dropdown");
+  menuBtn.onclick = (e) => {
+    if (!multiSelectMode) {
+      e.stopPropagation();
+      document.querySelectorAll(".actions-dropdown.show").forEach(mn => { if (mn !== dropdown) mn.classList.remove("show"); });
+      dropdown.classList.toggle("show");
+    }
+  };
+  card.querySelector(".edit-btn").onclick      = () => { if (!multiSelectMode) { dropdown.classList.remove("show"); openMainModal(m, true); } };
+  card.querySelector(".delete-btn").onclick    = () => { if (!multiSelectMode) { dropdown.classList.remove("show"); deleteMovieConfirm(m.id); } };
+  card.querySelector(".read-more-btn").onclick = () => { if (!multiSelectMode) openMainModal(m, false); };
+
+  return card;
+}
+
+/* Atualiza partes dinâmicas de um card existente sem recriar o DOM */
+function patchMovieCard(card, m) {
+  // Favorito
+  const favBtn = card.querySelector(".fav-btn-inline");
+  if (favBtn) favBtn.textContent = m.favorite ? "❤️" : "🤍";
+
+  // Badge de progresso
+  const existingBadge = card.querySelector(".progress-badge");
+  if (m.mediaType === "tv" && m.watchProgress?.season) {
+    const badgeText = `T${m.watchProgress.season} E${m.watchProgress.episode}`;
+    if (existingBadge) {
+      existingBadge.textContent = badgeText;
+    } else {
+      const posterLink = card.querySelector(".poster-link");
+      if (posterLink) {
+        const badge = document.createElement("div");
+        badge.className = "progress-badge";
+        badge.style.cssText = "position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.82);color:#fff;font-size:0.7rem;font-weight:700;padding:3px 7px;border-radius:5px;border:1px solid rgba(255,255,255,0.15);pointer-events:none;letter-spacing:0.03em;";
+        badge.textContent = badgeText;
+        posterLink.appendChild(badge);
+      }
+    }
+  } else if (existingBadge) {
+    existingBadge.remove();
+  }
+
+  // Seleção (multiselect)
+  const checkbox = card.querySelector(`#select-${m.id}`);
+  const isSelected = selectedMovies.has(m.id);
+  if (checkbox) checkbox.checked = isSelected;
+  if (isSelected) card.classList.add("ring-4", "ring-red-600");
+  else card.classList.remove("ring-4", "ring-red-600");
+}
+
 function renderMovies() {
   const texts = textMap[currentLang];
   if (!movieGrid) return;
-  movieGrid.innerHTML = "";
+
   const term = (document.querySelector("#searchInput")?.value || "").toLowerCase();
 
   let sorted = [...movies];
@@ -1007,121 +1147,49 @@ function renderMovies() {
     return (titleMatch || descMatch) && catMatch && favMatch;
   });
 
+  // Caso vazio — limpa e mostra mensagem
   if (!filtered.length) {
     movieGrid.innerHTML = `<div class="col-span-full text-center text-neutral-400 py-8">Nenhum filme encontrado.</div>`;
     return;
   }
 
-  filtered.forEach(m => {
-    const card = document.createElement("div");
-    card.className = "poster-card relative";
-    const isSelected = selectedMovies.has(m.id);
+  // 🚀 DOM DIFFING — só mexe no que mudou
+  const filteredIds = filtered.map(m => m.id);
 
-    if (multiSelectMode) {
-      card.innerHTML += `<input type="checkbox" id="select-${m.id}"
-        class="absolute top-2 right-2 w-5 h-5 z-20 cursor-pointer checked:accent-red-600"
-        ${isSelected ? "checked" : ""} />`;
-      if (isSelected) card.classList.add("ring-4", "ring-red-600");
-    }
-
-    const desc = (m.description || "").substring(0, 120);
-    const displayTitle = escapeHtml(currentLang === "en-US" && m.originalTitle ? m.originalTitle : m.title);
-
-    const progressBadge = (m.mediaType === "tv" && m.watchProgress?.season)
-      ? `<div style="position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.82);
-          color:#fff;font-size:0.7rem;font-weight:700;padding:3px 7px;border-radius:5px;
-          border:1px solid rgba(255,255,255,0.15);pointer-events:none;letter-spacing:0.03em;">
-          T${m.watchProgress.season} E${m.watchProgress.episode}</div>` : "";
-
-    const posterHtml = `
-      <div class="poster-link" style="position:relative;cursor:pointer;display:block;" title="▶ Assistir agora">
-        <img src="${m.poster}" class="poster-image" alt="${escapeHtml(m.title)}" loading="lazy" decoding="async" onerror="this.style.opacity='.3'" />
-        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
-          width:52px;height:52px;background:rgba(0,0,0,0.65);border-radius:50%;
-          display:flex;align-items:center;justify-content:center;
-          opacity:0;transition:opacity 0.2s;pointer-events:none;" class="play-overlay">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>
-        </div>
-        ${progressBadge}
-      </div>`;
-
-    card.innerHTML += `
-      ${posterHtml}
-      <div class="poster-info">
-        <div><div class="poster-title">${displayTitle}</div>
-          <div class="poster-description">${escapeHtml(desc)}</div></div>
-        <div class="mt-3 flex justify-between items-center">
-          <button class="read-more-btn">${texts.read_more}</button>
-          <div class="flex items-center gap-2">
-            <button class="fav-btn-inline">${m.favorite ? "❤️" : "🤍"}</button>
-            <div class="actions-menu">
-              <button class="actions-menu-btn">...</button>
-              <div class="actions-dropdown">
-                <button class="edit-btn">Editar</button>
-                <button class="delete-btn">Excluir</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>`;
-
-    card.querySelector(".fav-btn-inline").onclick = async (e) => {
-      e.stopPropagation();
-      const btn = e.currentTarget;
-      btn.disabled = true;
-      await toggleFavorite(m.id, m.favorite || false);
-      btn.disabled = false;
-    };
-
-    const posterDiv = card.querySelector(".poster-link");
-    const playOverlay = card.querySelector(".play-overlay");
-    if (posterDiv && playOverlay) {
-      posterDiv.addEventListener("mouseenter", () => { playOverlay.style.opacity = "1"; });
-      posterDiv.addEventListener("mouseleave", () => { playOverlay.style.opacity = "0"; });
-    }
-
-    card.onclick = (e) => {
-      if (e.target.closest(".actions-menu") || e.target.closest(".actions-dropdown")) return;
-      if (e.target.closest(".fav-btn-inline")) return;
-      if (multiSelectMode) {
-        if (e.target.type === "checkbox") return;
-        if (selectedMovies.has(m.id)) selectedMovies.delete(m.id);
-        else selectedMovies.add(m.id);
-        updateDeleteSelectedButton(); renderMovies();
-      } else {
-        if (e.target.closest(".poster-link")) openPlayerModal(m);
-      }
-    };
-
-    const checkbox = card.querySelector(`#select-${m.id}`);
-    if (checkbox) {
-      checkbox.onclick = (e) => {
-        e.stopPropagation();
-        if (e.target.checked) selectedMovies.add(m.id);
-        else selectedMovies.delete(m.id);
-        updateDeleteSelectedButton(); renderMovies();
-      };
-    }
-
-    const menuBtn = card.querySelector(".actions-menu-btn");
-    const dropdown = card.querySelector(".actions-dropdown");
-    menuBtn.onclick = (e) => {
-      if (!multiSelectMode) {
-        e.stopPropagation();
-        document.querySelectorAll(".actions-dropdown.show").forEach(mn => { if (mn !== dropdown) mn.classList.remove("show"); });
-        dropdown.classList.toggle("show");
-      }
-    };
-    card.querySelector(".edit-btn").onclick   = () => { if (!multiSelectMode) { dropdown.classList.remove("show"); openMainModal(m, true); } };
-    card.querySelector(".delete-btn").onclick  = () => { if (!multiSelectMode) { dropdown.classList.remove("show"); deleteMovieConfirm(m.id); } };
-    card.querySelector(".read-more-btn").onclick = () => { if (!multiSelectMode) openMainModal(m, false); };
-    movieGrid.appendChild(card);
+  // Remove cards que não estão mais na lista filtrada
+  Array.from(movieGrid.querySelectorAll(".poster-card")).forEach(card => {
+    if (!filteredIds.includes(card.dataset.movieId)) card.remove();
   });
 
-  document.addEventListener("click", (e) => {
-    if (!e.target.closest(".actions-menu"))
-      document.querySelectorAll(".actions-dropdown.show").forEach(mn => mn.classList.remove("show"));
+  // Adiciona/reordena cards
+  filtered.forEach((m, index) => {
+    const existingCard = movieGrid.querySelector(`.poster-card[data-movie-id="${m.id}"]`);
+
+    if (existingCard) {
+      // Card já existe — só atualiza partes dinâmicas
+      patchMovieCard(existingCard, m);
+
+      // Reordena se necessário (compara posição atual com a esperada)
+      const currentCards = Array.from(movieGrid.querySelectorAll(".poster-card"));
+      if (currentCards.indexOf(existingCard) !== index) {
+        movieGrid.insertBefore(existingCard, currentCards[index] || null);
+      }
+    } else {
+      // Card novo — cria do zero e insere na posição correta
+      const newCard = createMovieCard(m, texts);
+      const currentCards = Array.from(movieGrid.querySelectorAll(".poster-card"));
+      movieGrid.insertBefore(newCard, currentCards[index] || null);
+    }
   });
+
+  // Registra listener global de fechar dropdown (uma vez só)
+  if (!movieGrid._clickListenerAdded) {
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest(".actions-menu"))
+        document.querySelectorAll(".actions-dropdown.show").forEach(mn => mn.classList.remove("show"));
+    });
+    movieGrid._clickListenerAdded = true;
+  }
 }
 
 /* ---- MAIN MODAL ---- */
