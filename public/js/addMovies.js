@@ -1023,7 +1023,7 @@ function renderMovies() {
 
     const posterHtml = `
       <div class="poster-link" style="position:relative;cursor:pointer;display:block;" title="▶ Assistir agora">
-        <img src="${m.poster}" class="poster-image" alt="${escapeHtml(m.title)}" onerror="this.style.opacity='.3'" />
+        <img src="${m.poster}" class="poster-image" alt="${escapeHtml(m.title)}" loading="lazy" decoding="async" onerror="this.style.opacity='.3'" />
         <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
           width:52px;height:52px;background:rgba(0,0,0,0.65);border-radius:50%;
           display:flex;align-items:center;justify-content:center;

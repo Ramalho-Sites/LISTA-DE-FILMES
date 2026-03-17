@@ -1,4 +1,22 @@
 /* =============================== */
+/* 🚀 PERFORMANCE & SCROLL SUAVE   */
+/* =============================== */
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Scroll suave na página principal */
+body {
+  -webkit-overflow-scrolling: touch; /* iOS momentum scroll */
+}
+
+/* Grid de filmes — compositing layer própria */
+#movieGrid {
+  will-change: contents;
+}
+
+/* =============================== */
 /* 💎 MELHORIA 2: BOTÕES DE FILTRO */
 /* =============================== */
 
@@ -140,18 +158,14 @@
 
 .poster-card {
   position: relative;
-  /* overflow:hidden removido — estava cortando o botão de favorito */
   border-radius: 0.75rem;
   cursor: pointer;
   background: #18181b;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-/* O recorte arredondado fica só na imagem e no info, não no card inteiro */
-.poster-card .poster-link,
-.poster-card .poster-image {
-  border-radius: 0.75rem 0.75rem 0 0;
-  overflow: hidden;
+  /* 🚀 GPU acceleration para scroll suave */
+  will-change: transform;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
 
 .poster-card:hover {
@@ -161,9 +175,12 @@
 
 .poster-image {
   width: 100%;
-  height: 200px; /* menor no mobile — cards são menores com 2 colunas */
+  height: 200px;
   object-fit: cover;
   display: block;
+  /* 🚀 Evita repaint desnecessário */
+  will-change: opacity;
+  transform: translateZ(0);
 }
 
 @media (min-width: 640px) {
