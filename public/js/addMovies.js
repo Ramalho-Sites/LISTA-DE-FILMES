@@ -108,6 +108,22 @@ async function fetchTVSeasonDetails(tvId, season) {
     return d?.episodes ? d : null;
   } catch(e) { return null; }
 }
+
+// 🇺🇸 Busca o título de lançamento nos EUA (para filmes de outros países)
+async function fetchEnglishTitle(movieId, mediaType = "movie") {
+  try {
+    const endpoint = mediaType === "tv"
+      ? `https://api.themoviedb.org/3/tv/${movieId}/alternative_titles?api_key=${TMDB_API_KEY}`
+      : `https://api.themoviedb.org/3/movie/${movieId}/alternative_titles?api_key=${TMDB_API_KEY}`;
+    const r = await fetch(endpoint);
+    const d = await r.json();
+    const titles = mediaType === "tv" ? (d?.results || []) : (d?.titles || []);
+    // Procura título US primeiro, depois GB
+    const us = titles.find(t => t.iso_3166_1 === "US");
+    const gb = titles.find(t => t.iso_3166_1 === "GB");
+    return us?.title || gb?.title || null;
+  } catch(e) { return null; }
+}
 async function loadGenresTMDb() {
   try {
     const r = await fetch(`https://api.themoviedb.org/3/genre/movie/list?api_key=${TMDB_API_KEY}&language=${TMDB_LANGUAGE}`);
@@ -145,23 +161,62 @@ let tmpOriginalTitle = "", tmpTmdbId = "";
 let currentPlayerIndex = 0;
 let playingTmdbId = "", playingMovieId = "";
 let playingSeason = 1, playingEpisode = 1;
-// 📺 Dados da série em reprodução (para limitar inputs e botão próximo)
 let playingTotalSeasons = 0;
 let playingTotalEpisodes = 0;
 let showOnlyFavorites = false;
 let addMediaType = "movie";
-// 🔄 unsubscribe do onSnapshot
 let unsubscribeMovies = null;
 
-/* 🧹 Normaliza categoria para evitar duplicatas por diferença de case */
+/* 🧹 Mapa de normalização — converte variações da TMDB para o nome canônico */
+const GENRE_NORMALIZE_MAP = {
+  // Português — variações → canônico
+  "ação": "Ação", "accao": "Ação",
+  "comedia": "Comédia", "comédia": "Comédia",
+  "ficção científica": "Ficção Científica", "ficção-científica": "Ficção Científica",
+  "ficcao cientifica": "Ficção Científica", "sci-fi": "Ficção Científica",
+  "terror": "Terror", "horror": "Terror",
+  "romance": "Romance",
+  "fantasia": "Fantasia",
+  "thriller": "Thriller",
+  "suspense": "Suspense",
+  "drama": "Drama",
+  "animação": "Animação", "animacao": "Animação",
+  "documentário": "Documentário", "documentario": "Documentário",
+  "aventura": "Aventura",
+  "crime": "Crime",
+  "mistério": "Mistério", "misterio": "Mistério",
+  "música": "Música", "musica": "Música",
+  "faroeste": "Faroeste", "western": "Faroeste",
+  "guerra": "Guerra",
+  "história": "História", "historia": "História",
+  "família": "Família", "familia": "Família",
+  "comédia dramática": "Comédia Dramática",
+  // Inglês (TMDB retorna em inglês em alguns casos)
+  "action": "Ação",
+  "comedy": "Comédia",
+  "science fiction": "Ficção Científica",
+  "fantasy": "Fantasia",
+  "animation": "Animação",
+  "documentary": "Documentário",
+  "adventure": "Aventura",
+  "mystery": "Mistério",
+  "music": "Música",
+  "history": "História",
+  "family": "Família",
+  "war": "Guerra",
+};
+
 function normalizeCategory(cat) {
   if (!cat) return "";
+  const key = cat.trim().toLowerCase();
+  // Se tiver no mapa de normalização, usa o canônico
+  if (GENRE_NORMALIZE_MAP[key]) return GENRE_NORMALIZE_MAP[key];
+  // Caso contrário capitaliza só a primeira letra (preserva acentos)
   const s = cat.trim();
-  // Capitaliza cada palavra para casos como "ficção científica" → "Ficção Científica"
-  return s.replace(/\b\w/g, l => l.toUpperCase());
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-/* 🚀 Debounce — agrupa chamadas rápidas em uma só */
+/* 🚀 Debounce */
 function debounce(fn, delay) {
   let timer;
   return function(...args) {
@@ -176,18 +231,30 @@ const textMap = {
     delete_selected:"Excluir Selecionados", sort_by:"Ordenar por:", sort_date:"Mais Recentes",
     sort_title:"Título (A-Z)", logout:"Sair", read_more:"Leia mais",
     favorites_filter:"❤️ Favoritos", favorites_filter_active:"❤️ Favoritos",
+    "Todos":"Todos",
+    // Gêneros PT
     "Ação":"Ação","Terror":"Terror","Comédia":"Comédia","Romance":"Romance",
     "Fantasia":"Fantasia","Thriller":"Thriller","Suspense":"Suspense",
-    "Drama":"Drama","Ficção Científica":"Ficção Científica","Todos":"Todos"
+    "Drama":"Drama","Ficção Científica":"Ficção Científica",
+    "Animação":"Animação","Documentário":"Documentário","Aventura":"Aventura",
+    "Crime":"Crime","Mistério":"Mistério","Música":"Música","Faroeste":"Faroeste",
+    "Guerra":"Guerra","História":"História","Família":"Família",
+    "Comédia Dramática":"Comédia Dramática",
   },
   "en-US": {
     brand:"My Watchlist", select_toggle_off:"Select", select_toggle_on:"Cancel Selection",
     delete_selected:"Delete Selected", sort_by:"Sort by:", sort_date:"Most Recent",
     sort_title:"Title (A-Z)", logout:"Logout", read_more:"Read more",
     favorites_filter:"❤️ Favorites", favorites_filter_active:"❤️ Favorites",
+    "Todos":"All",
+    // Gêneros EN
     "Ação":"Action","Terror":"Horror","Comédia":"Comedy","Romance":"Romance",
     "Fantasia":"Fantasy","Thriller":"Thriller","Suspense":"Suspense",
-    "Drama":"Drama","Ficção Científica":"Science Fiction","Todos":"All"
+    "Drama":"Drama","Ficção Científica":"Science Fiction",
+    "Animação":"Animation","Documentário":"Documentary","Aventura":"Adventure",
+    "Crime":"Crime","Mistério":"Mystery","Música":"Music","Faroeste":"Western",
+    "Guerra":"War","História":"History","Família":"Family",
+    "Comédia Dramática":"Dramedy",
   }
 };
 
@@ -250,6 +317,7 @@ function startRealtimeSync() {
 
   const q = query(collection(db, "users", userId, "movies"));
 
+  let firstLoad = true;
   unsubscribeMovies = onSnapshot(q, (snap) => {
     movies = [];
     snap.forEach(d => {
@@ -259,6 +327,12 @@ function startRealtimeSync() {
       cats.forEach(c => categoriesSet.add(c));
     });
     debouncedRender();
+
+    // 🔧 Roda a migração de títulos silenciosamente só na primeira carga
+    if (firstLoad) {
+      firstLoad = false;
+      setTimeout(() => autoFixOriginalTitles(), 2000);
+    }
   }, (err) => {
     console.error("Erro no sync:", err);
     showToast("Erro ao sincronizar filmes", "error");
@@ -789,7 +863,9 @@ function buildAddMovieUI() {
     if (details) {
       tmpTmdbId = String(details.id);
       const displayTitle = details.title || details.name || "";
-      tmpOriginalTitle = details.original_title || details.original_name || displayTitle;
+      // 🇺🇸 Busca título EN (US) para filmes não anglófonos (ex: Oldboy → "Oldboy" não "올드보이")
+      const enTitle = await fetchEnglishTitle(details.id, isTV ? "tv" : "movie");
+      tmpOriginalTitle = enTitle || details.title || details.name || displayTitle;
       $("addTitle").value    = displayTitle;
       $("addSynopsis").value = details.overview || "Sinopse não disponível.";
       const posterUrl = details.poster_path ? `${TMDB_IMG_BASE_URL}${details.poster_path}` : "";
@@ -820,7 +896,8 @@ async function handleFetchPoster() {
   const details = isTV ? await fetchTVDetailsTMDb(itemId) : await fetchMovieDetailsTMDb(itemId);
   if (details) {
     const displayTitle = details.title || details.name || "";
-    tmpOriginalTitle = details.original_title || details.original_name || displayTitle;
+    const enTitle = await fetchEnglishTitle(itemId, isTV ? "tv" : "movie");
+    tmpOriginalTitle = enTitle || details.title || details.name || displayTitle;
     $("addTitle").value = displayTitle;
     const posterUrl = details.poster_path ? `${TMDB_IMG_BASE_URL}${details.poster_path}` : "";
     resetPosterPreview(posterUrl);
@@ -1093,8 +1170,18 @@ function createMovieCard(m, texts) {
   return card;
 }
 
-/* Atualiza partes dinâmicas de um card existente sem recriar o DOM */
-function patchMovieCard(card, m) {
+function patchMovieCard(card, m, texts) {
+  // Título — atualiza sempre (muda com idioma)
+  const titleEl = card.querySelector(".poster-title");
+  if (titleEl) {
+    const displayTitle = escapeHtml(currentLang === "en-US" && m.originalTitle ? m.originalTitle : m.title);
+    titleEl.innerHTML = displayTitle;
+  }
+
+  // Botão "Leia mais" — atualiza texto com idioma
+  const readMoreBtn = card.querySelector(".read-more-btn");
+  if (readMoreBtn) readMoreBtn.textContent = texts.read_more;
+
   // Favorito
   const favBtn = card.querySelector(".fav-btn-inline");
   if (favBtn) favBtn.textContent = m.favorite ? "❤️" : "🤍";
@@ -1173,7 +1260,7 @@ function renderMovies() {
 
     if (existingCard) {
       // Card já existe — só atualiza partes dinâmicas
-      patchMovieCard(existingCard, m);
+      patchMovieCard(existingCard, m, texts);
 
       // Reordena se necessário (compara posição atual com a esperada)
       const currentCards = Array.from(movieGrid.querySelectorAll(".poster-card"));
@@ -1289,7 +1376,8 @@ async function handleEditFetchPoster() {
   const details = await fetchMovieDetailsTMDb(movieId, currentLang);
   if (details) {
     const apiTitle = details.title || details.original_title || "";
-    tmpOriginalTitle = details.original_title || apiTitle;
+    const enTitle = await fetchEnglishTitle(movieId, "movie");
+    tmpOriginalTitle = enTitle || details.title || apiTitle;
     tmpTmdbId = String(movieId);
     modalTitle.textContent = apiTitle;
     modalSinopse.value = details.overview || "";
@@ -1461,3 +1549,44 @@ async function deleteSelectedMoviesConfirm() {
 
 /* ---- DEBUG ---- */
 window.__movieApp = { getMovies: () => movies, reload: loadMovies };
+
+/* ============================================================
+   🔧 MIGRAÇÃO AUTOMÁTICA — corrige originalTitle em background
+   Roda silenciosamente uma vez por sessão após carregar os filmes
+============================================================ */
+async function autoFixOriginalTitles() {
+  if (!userId) return;
+
+  // Filmes que têm tmdbId mas o originalTitle parece ser do idioma de origem
+  // (não é inglês nem português — contém caracteres não-latinos)
+  const needsFix = movies.filter(m => {
+    if (!m.tmdbId || !m.originalTitle) return false;
+    // Se o originalTitle tem caracteres não-latinos (coreano, japonês, árabe, etc.)
+    // ou se é idêntico ao título PT (nunca foi buscado o EN)
+    const hasNonLatin = /[^\u0000-\u024F]/.test(m.originalTitle);
+    const sameAsPT = m.originalTitle === m.title;
+    return hasNonLatin || sameAsPT;
+  });
+
+  if (!needsFix.length) return;
+
+  console.log(`🔧 Auto-corrigindo títulos EN de ${needsFix.length} filmes...`);
+
+  for (const m of needsFix) {
+    try {
+      const enTitle = await fetchEnglishTitle(m.tmdbId, m.mediaType || "movie");
+      if (!enTitle || enTitle === m.originalTitle) continue;
+
+      await updateDoc(doc(db, "users", userId, "movies", m.id), {
+        originalTitle: enTitle
+      });
+      // Atualiza localmente também
+      m.originalTitle = enTitle;
+      console.log(`✅ ${m.title} → "${enTitle}"`);
+
+      await new Promise(r => setTimeout(r, 250));
+    } catch(e) {
+      console.error(`❌ ${m.title}:`, e);
+    }
+  }
+}
