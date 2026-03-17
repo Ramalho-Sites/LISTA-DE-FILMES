@@ -216,6 +216,8 @@ let playingEpisode = 1;
 let showOnlyFavorites = false;
 // 📺 Tipo de mídia sendo adicionado no modal de adição
 let addMediaType = "movie";
+// ▶️ ID do documento do filme sendo reproduzido (para salvar progresso)
+let playingMovieId = "";
 
 const textMap = {
   "pt-BR": {
@@ -441,17 +443,52 @@ async function openPlayerModal(movie) {
     return;
   }
 
-  playingTmdbId = tmdbId;
+  playingTmdbId  = tmdbId;
+  playingMovieId = movie.id || "";
   currentPlayerIndex = 0;
   currentMediaType = movie.mediaType || "movie";
-  playingSeason  = 1;
-  playingEpisode = 1;
+
+  // ▶️ Verifica progresso salvo para séries
+  let startSeason  = 1;
+  let startEpisode = 1;
+
+  if (currentMediaType === "tv" && movie.watchProgress) {
+    const { season, episode } = movie.watchProgress;
+    if (season && episode) {
+      const resume = await showCustomConfirm(
+        "Continuar assistindo?",
+        `Você parou na Temporada ${season}, Episódio ${episode}. Deseja continuar daqui?`,
+        "Continuar"
+      );
+      if (resume) {
+        startSeason  = season;
+        startEpisode = episode;
+      }
+    }
+  }
+
+  playingSeason  = startSeason;
+  playingEpisode = startEpisode;
 
   const epRow = $("playerEpisodeRow");
-  if (epRow) epRow.style.display = currentMediaType === "tv" ? "flex" : "none";
+  if (epRow) {
+    epRow.style.display = currentMediaType === "tv" ? "flex" : "none";
+    if (currentMediaType === "tv") {
+      const seasonInput  = $("playerSeasonInput");
+      const episodeInput = $("playerEpisodeInput");
+      if (seasonInput)  seasonInput.value  = startSeason;
+      if (episodeInput) episodeInput.value = startEpisode;
+    }
+  }
 
   const titleEl = $("playerTitle");
   if (titleEl) titleEl.textContent = movie.title || "";
+
+  buildServerButtons(tmdbId);
+  loadPlayer(tmdbId, 0);
+  modal.style.display = "flex";
+  document.body.style.overflow = "hidden";
+}
 
   buildServerButtons(tmdbId);
   loadPlayer(tmdbId, 0);
@@ -467,14 +504,32 @@ window.__loadEpisode = function() {
   if (playingTmdbId) loadPlayer(playingTmdbId, 0);
 };
 
-function closePlayerModal() {
+async function closePlayerModal() {
   const modal = $("playerModal");
   if (!modal) return;
   const iframe = $("playerIframe");
   if (iframe) iframe.src = "about:blank";
   modal.style.display = "none";
   document.body.style.overflow = "";
-  playingTmdbId = "";
+
+  // ▶️ Salva progresso automaticamente ao fechar (só para séries)
+  if (currentMediaType === "tv" && playingMovieId && userId) {
+    const season  = parseInt($("playerSeasonInput")?.value)  || playingSeason;
+    const episode = parseInt($("playerEpisodeInput")?.value) || playingEpisode;
+    try {
+      const ref = doc(db, "users", userId, "movies", playingMovieId);
+      await updateDoc(ref, { watchProgress: { season, episode } });
+      // Atualiza localmente também
+      const movie = movies.find(m => m.id === playingMovieId);
+      if (movie) movie.watchProgress = { season, episode };
+      renderMovies(); // Atualiza badge no card
+    } catch (e) {
+      console.error("Erro ao salvar progresso:", e);
+    }
+  }
+
+  playingTmdbId  = "";
+  playingMovieId = "";
   currentPlayerIndex = 0;
   currentMediaType = "movie";
   playingSeason    = 1;
@@ -1156,6 +1211,18 @@ function renderMovies() {
     const desc = (m.description || "").substring(0, 120);
     const displayTitle = escapeHtml(currentLang === "en-US" && m.originalTitle ? m.originalTitle : m.title);
 
+    // ▶️ Badge de progresso (só para séries com watchProgress)
+    const progressBadge = (m.mediaType === "tv" && m.watchProgress?.season)
+      ? `<div style="
+          position:absolute; bottom:8px; right:8px;
+          background:rgba(0,0,0,0.82);
+          color:#fff; font-size:0.7rem; font-weight:700;
+          padding:3px 7px; border-radius:5px;
+          border:1px solid rgba(255,255,255,0.15);
+          pointer-events:none; letter-spacing:0.03em;
+        ">T${m.watchProgress.season} E${m.watchProgress.episode}</div>`
+      : "";
+
     const posterHtml = `
       <div class="poster-link" style="position:relative; cursor:pointer; display:block;" title="▶ Assistir agora">
         <img src="${m.poster}" class="poster-image" alt="${escapeHtml(m.title)}" onerror="this.style.opacity='.3'" />
@@ -1170,6 +1237,7 @@ function renderMovies() {
         " class="play-overlay">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="white"><polygon points="5,3 19,12 5,21"/></svg>
         </div>
+        ${progressBadge}
       </div>
     `;
 
