@@ -156,7 +156,9 @@ let unsubscribeMovies = null;
 /* 🧹 Normaliza categoria para evitar duplicatas por diferença de case */
 function normalizeCategory(cat) {
   if (!cat) return "";
-  return cat.trim().charAt(0).toUpperCase() + cat.trim().slice(1);
+  const s = cat.trim();
+  // Capitaliza cada palavra para casos como "ficção científica" → "Ficção Científica"
+  return s.replace(/\b\w/g, l => l.toUpperCase());
 }
 
 /* 🚀 Debounce — agrupa chamadas rápidas em uma só */
@@ -1152,6 +1154,10 @@ function renderMovies() {
     movieGrid.innerHTML = `<div class="col-span-full text-center text-neutral-400 py-8">Nenhum filme encontrado.</div>`;
     return;
   }
+
+  // Remove mensagem de "vazio" se existir antes do diffing
+  const emptyMsg = movieGrid.querySelector(".col-span-full");
+  if (emptyMsg) emptyMsg.remove();
 
   // 🚀 DOM DIFFING — só mexe no que mudou
   const filteredIds = filtered.map(m => m.id);
