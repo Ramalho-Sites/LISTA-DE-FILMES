@@ -227,7 +227,7 @@ function debounce(fn, delay) {
 
 const textMap = {
   "pt-BR": {
-    brand:"Meus Filmes", select_toggle_off:"Selecionar", select_toggle_on:"Cancelar Seleção",
+    brand:"Meus Filmes", select_toggle_off:"Selecionar", select_toggle_on:"✕ Seleção",
     delete_selected:"Excluir Selecionados", sort_by:"Ordenar por:", sort_date:"Mais Recentes",
     sort_title:"Título (A-Z)", logout:"Sair", read_more:"Leia mais",
     favorites_filter:"❤️ Favoritos", favorites_filter_active:"❤️ Favoritos",
@@ -242,7 +242,7 @@ const textMap = {
     "Comédia Dramática":"Comédia Dramática",
   },
   "en-US": {
-    brand:"My Watchlist", select_toggle_off:"Select", select_toggle_on:"Cancel Selection",
+    brand:"My Watchlist", select_toggle_off:"Select", select_toggle_on:"✕ Select",
     delete_selected:"Delete Selected", sort_by:"Sort by:", sort_date:"Most Recent",
     sort_title:"Title (A-Z)", logout:"Logout", read_more:"Read more",
     favorites_filter:"❤️ Favorites", favorites_filter_active:"❤️ Favorites",
@@ -1518,14 +1518,27 @@ function toggleMultiSelectMode() {
   selectedMovies.clear();
   const texts = textMap[currentLang];
   const tb = $("toggleSelectModeBtn");
+  const lb = $("logoutBtn");
   if (multiSelectMode) {
     tb.textContent = texts.select_toggle_on;
-    tb.className = "px-3 py-2 bg-red-600 text-white rounded flex-shrink-0";
+    tb.className = "px-2 py-1 md:px-3 md:py-2 bg-red-600 text-white rounded flex-shrink-0 text-xs md:text-sm";
+    // Botão Sair fica cinza e desabilitado para não confundir com saída da seleção
+    if (lb) {
+      lb.className = "px-2 py-1 md:px-3 md:py-2 bg-neutral-600 text-neutral-400 rounded flex-shrink-0 text-xs md:text-sm cursor-not-allowed";
+      lb.disabled = true;
+      lb.title = "Saia do modo seleção primeiro";
+    }
     $("addMovieFab").classList.add("hidden");
     deleteSelectedBtn.classList.remove("hidden");
   } else {
     tb.textContent = texts.select_toggle_off;
-    tb.className = "px-3 py-2 bg-neutral-700 text-white rounded flex-shrink-0";
+    tb.className = "px-2 py-1 md:px-3 md:py-2 bg-neutral-700 text-white rounded flex-shrink-0 text-xs md:text-sm";
+    // Restaura botão Sair
+    if (lb) {
+      lb.className = "px-2 py-1 md:px-3 md:py-2 bg-red-600 rounded flex-shrink-0 text-xs md:text-sm";
+      lb.disabled = false;
+      lb.title = "";
+    }
     $("addMovieFab").classList.remove("hidden");
     deleteSelectedBtn.classList.add("hidden");
   }
