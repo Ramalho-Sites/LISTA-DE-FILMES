@@ -161,9 +161,42 @@
 
 .poster-image {
   width: 100%;
-  height: 280px;
+  height: 200px; /* menor no mobile — cards são menores com 2 colunas */
   object-fit: cover;
   display: block;
+}
+
+@media (min-width: 640px) {
+  .poster-image {
+    height: 240px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .poster-image {
+    height: 280px;
+  }
+}
+
+/* Título menor no mobile para caber em 2 colunas */
+.poster-title {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: white;
+  /* Limita a 2 linhas e corta com ... */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@media (min-width: 640px) {
+  .poster-title {
+    font-size: 1.1rem;
+    -webkit-line-clamp: unset;
+    overflow: visible;
+    display: block;
+  }
 }
 
 .poster-info {
@@ -335,12 +368,13 @@
   border-radius: 0.75rem;
   overflow: hidden;
   background: #18181b;
-  /* Garante a mesma altura que um card real */
-  min-height: 280px;
-  /* Não tem cursor de pointer pois não é clicável */
+  min-height: 200px;
   cursor: default;
-  /* Evita hover scale acidental */
   pointer-events: none;
+}
+
+@media (min-width: 1024px) {
+  .skeleton-card { min-height: 280px; }
 }
 
 /* Bloco genérico com o shimmer */
@@ -359,8 +393,16 @@
 /* Imagem do pôster */
 .skeleton-poster {
   width: 100%;
-  height: 280px; /* mesma altura do .poster-image */
+  height: 200px;
   display: block;
+}
+
+@media (min-width: 640px) {
+  .skeleton-poster { height: 240px; }
+}
+
+@media (min-width: 1024px) {
+  .skeleton-poster { height: 280px; }
 }
 
 /* Rodapé do card (área do título + botões) */
