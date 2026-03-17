@@ -298,52 +298,52 @@ function createPlayerModal() {
 
         <!-- Seletor de Temporada -->
         <div style="display:flex;align-items:center;gap:6px;">
-          <span style="color:#666;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;">Temp.</span>
-          <div style="display:flex;align-items:center;background:#1e1e1e;border:1px solid #333;border-radius:20px;overflow:hidden;">
-            <button onclick="window.__stepSeason(-1)" style="background:none;border:none;color:#666;
+          <span style="color:#999;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;">Temp.</span>
+          <div style="display:flex;align-items:center;background:#1e1e1e;border:1px solid #555;border-radius:20px;overflow:hidden;">
+            <button onclick="window.__stepSeason(-1)" style="background:none;border:none;color:#999;
               width:26px;height:28px;cursor:pointer;font-size:13px;display:flex;align-items:center;
-              justify-content:center;transition:color 0.15s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#666'">‹</button>
+              justify-content:center;transition:color 0.15s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#999'">‹</button>
             <span id="playerSeasonDisplay" style="color:#fff;font-size:13px;font-weight:700;
               min-width:20px;text-align:center;user-select:none;">1</span>
             <input id="playerSeasonInput" type="hidden" value="1"/>
-            <button onclick="window.__stepSeason(1)" style="background:none;border:none;color:#666;
+            <button onclick="window.__stepSeason(1)" style="background:none;border:none;color:#999;
               width:26px;height:28px;cursor:pointer;font-size:13px;display:flex;align-items:center;
-              justify-content:center;transition:color 0.15s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#666'">›</button>
+              justify-content:center;transition:color 0.15s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#999'">›</button>
           </div>
         </div>
 
         <!-- Seletor de Episódio -->
         <div style="display:flex;align-items:center;gap:6px;">
-          <span style="color:#666;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;">Ep.</span>
-          <div style="display:flex;align-items:center;background:#1e1e1e;border:1px solid #333;border-radius:20px;overflow:hidden;">
-            <button onclick="window.__stepEpisode(-1)" style="background:none;border:none;color:#666;
+          <span style="color:#999;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;">Ep.</span>
+          <div style="display:flex;align-items:center;background:#1e1e1e;border:1px solid #555;border-radius:20px;overflow:hidden;">
+            <button onclick="window.__stepEpisode(-1)" style="background:none;border:none;color:#999;
               width:26px;height:28px;cursor:pointer;font-size:13px;display:flex;align-items:center;
-              justify-content:center;transition:color 0.15s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#666'">‹</button>
+              justify-content:center;transition:color 0.15s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#999'">‹</button>
             <span id="playerEpisodeDisplay" style="color:#fff;font-size:13px;font-weight:700;
               min-width:20px;text-align:center;user-select:none;">1</span>
             <input id="playerEpisodeInput" type="hidden" value="1"/>
-            <button onclick="window.__stepEpisode(1)" style="background:none;border:none;color:#666;
+            <button onclick="window.__stepEpisode(1)" style="background:none;border:none;color:#999;
               width:26px;height:28px;cursor:pointer;font-size:13px;display:flex;align-items:center;
-              justify-content:center;transition:color 0.15s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#666'">›</button>
+              justify-content:center;transition:color 0.15s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#999'">›</button>
           </div>
         </div>
 
         <!-- Info dinâmica da temporada selecionada -->
-        <span id="playerEpInfo" style="color:#555;font-size:11px;"></span>
+        <span id="playerEpInfo" style="color:#888;font-size:11px;"></span>
 
         <!-- Botão Ir -->
         <button onclick="window.__loadEpisode()" style="padding:5px 16px;border-radius:20px;
-          border:1px solid #4f46e5;background:transparent;color:#a5b4fc;font-size:11px;
+          border:1px solid #6366f1;background:transparent;color:#c7d2fe;font-size:11px;
           font-weight:700;cursor:pointer;letter-spacing:0.05em;transition:all 0.15s;"
           onmouseover="this.style.background='#4f46e5';this.style.color='#fff'"
-          onmouseout="this.style.background='transparent';this.style.color='#a5b4fc'">▶ IR</button>
+          onmouseout="this.style.background='transparent';this.style.color='#c7d2fe'">▶ IR</button>
 
         <!-- Botão Próximo Episódio -->
         <button onclick="window.__nextEpisode()" id="playerNextBtn" style="padding:5px 16px;border-radius:20px;
-          border:1px solid #16a34a;background:transparent;color:#86efac;font-size:11px;
+          border:1px solid #22c55e;background:transparent;color:#bbf7d0;font-size:11px;
           font-weight:700;cursor:pointer;letter-spacing:0.05em;margin-left:auto;transition:all 0.15s;"
           onmouseover="this.style.background='#16a34a';this.style.color='#fff'"
-          onmouseout="this.style.background='transparent';this.style.color='#86efac'">PRÓXIMO ▶▶</button>
+          onmouseout="this.style.background='transparent';this.style.color='#bbf7d0'">PRÓXIMO ▶▶</button>
       </div>
       <div style="display:flex;align-items:center;gap:8px;padding:10px 16px;
         background:#1a1a1a;flex-wrap:wrap;border-top:1px solid #333;">
