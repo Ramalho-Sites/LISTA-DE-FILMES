@@ -1598,14 +1598,22 @@ async function openAddModal() {
   at.value = ""; $("addSynopsis").value = ""; $("addPosterUrl").value = "";
   resetPosterPreview(); tmpTmdbId = ""; tmpOriginalTitle = "";
   addMediaType = "movie";
+
+  // Reseta botões Filme/Série com as classes corretas do novo design
   const m2 = $("addTypeMovie"), s2 = $("addTypeSeries"), t2 = $("addModalTitle");
-  if (m2) m2.className = "px-4 py-2 rounded font-semibold text-sm bg-indigo-600 text-white";
-  if (s2) s2.className = "px-4 py-2 rounded font-semibold text-sm bg-neutral-700 text-neutral-300";
+  if (m2) { m2.className = "add-type-btn active"; }
+  if (s2) { s2.className = "add-type-btn"; }
   if (t2) t2.textContent = "Adicionar filme";
+
   $("addStreaming").value = userPreferences.defaultStreaming || "";
   $("addRemember").checked = !!(userPreferences.defaultStreaming);
+
+  // Reconstrói chips SEMPRE ao abrir (garante que novos gêneros apareçam)
+  rebuildCategoryOptions();
+
   const defaultCats = userPreferences.defaultCategories || [];
   setAddSelectedCategories(defaultCats);
+
   const am = $("addModal");
   if (am) am.style.display = "flex";
 }
