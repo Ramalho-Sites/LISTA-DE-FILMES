@@ -1,55 +1,96 @@
-# 🎬 Projeto Lista de Filmes
+# 🎬 Minha Lista de Filmes
 
-Um aplicativo web interativo para pesquisar e exibir informações de filmes, criado com HTML, CSS e JavaScript puro.
+Um aplicativo web completo para gerenciar, organizar e assistir filmes e séries, com autenticação, player integrado e sincronização em tempo real.
 
-![Demo do Projeto](imagens/Demo.png)
+![Demo do Projeto](imagens/demo.png)
+
 ### 🔗 Acesse o site: [Clique aqui para interagir com o projeto!](https://ramalho-sites.github.io/LISTA-DE-FILMES/public/login.html)
+
+---
 
 ## 📜 Sobre o Projeto
 
-Este projeto foi desenvolvido como um exercício prático para consumir dados de uma API de filmes (provavelmente a [The Movie Database - TMDB](https://www.themoviedb.org/)) e exibi-los de forma amigável. O usuário pode pesquisar por um filme específico e a aplicação retorna uma grade com os resultados correspondentes.
+Aplicativo pessoal de watchlist construído com HTML, CSS, JavaScript e Firebase. Permite adicionar filmes e séries via integração com a TMDB, assistir com player embutido, organizar por categorias e favoritos, e acompanhar o progresso de séries — tudo sincronizado em tempo real entre dispositivos.
 
 ---
 
-## ✨ Funcionalidades Principais
+## ✨ Funcionalidades
 
-* **Busca em tempo real:** Pesquise filmes dinamicamente.
-* **Layout Responsivo:** Funciona bem em desktops e dispositivos móveis.
-* **Consumo de API:** Demonstração de como fazer requisições `fetch` em JavaScript para uma API externa.
-* **Manipulação do DOM:** Atualiza a página dinamicamente com os resultados da busca sem recarregar.
+### 🎬 Filmes & Séries
+- Adição de filmes e séries com busca automática na **TMDB**
+- Pôster, sinopse e categorias preenchidos automaticamente
+- Suporte a títulos de lançamento nos **EUA** para filmes estrangeiros
+- Tradução de sinopse e título entre **PT-BR** e **EN**
+
+### ▶️ Player Integrado
+- Múltiplos servidores de streaming com fallback automático: **EmbedAPI, VidSrc, MultiEmbed, AutoEmbed**
+- Seletor de temporada e episódio para séries com limites vindos da TMDB
+- Botão **Próximo Episódio** com avanço automático de temporada
+- **Continuar assistindo** — salva e retoma do episódio onde parou
+
+### ❤️ Organização
+- **Favoritos** com filtro rápido na barra de categorias
+- Filtro por categoria, ordenação por data ou título (A-Z)
+- Pesquisa por título ou sinopse em tempo real
+- Modo de seleção múltipla para exclusão em lote
+
+### 🔄 Sincronização
+- Autenticação com **email/senha** ou **Google**
+- Dados sincronizados em **tempo real** via Firestore `onSnapshot`
+- Funciona em múltiplos dispositivos simultaneamente
+
+### 📱 Interface
+- Layout responsivo — **2 colunas no mobile**, até 6 no desktop
+- **Skeleton loading** animado enquanto os filmes carregam
+- Badge **T2 E5** no pôster de séries com progresso salvo
+- Performance otimizada com **DOM diffing** e **debounce**
 
 ---
 
-## 🛠️ Tecnologias Utilizadas
+## 🛠️ Tecnologias
 
-* **HTML5:** Estrutura semântica do site.
-* **CSS3:** Estilização, layout em grade (Grid/Flexbox) e responsividade.
-* **JavaScript (ES6+):** Lógica do aplicativo, manipulação do DOM e requisições de API (`fetch`).
+| Tecnologia | Uso |
+|---|---|
+| **HTML5 / CSS3** | Estrutura e estilização |
+| **Tailwind CSS** | Classes utilitárias |
+| **JavaScript ES6+** | Lógica da aplicação |
+| **Firebase Auth** | Autenticação de usuários |
+| **Cloud Firestore** | Banco de dados em tempo real |
+| **TMDB API** | Dados de filmes e séries |
 
 ---
 
-## 🚀 Como Executar o Projeto
+## 🚀 Como Usar
 
-Como este é um projeto puramente front-end, você não precisa de um servidor complexo para rodá-lo.
+Acesse o site, crie uma conta com email/senha ou entre com Google — e pronto, já pode começar a adicionar filmes e séries.
 
-1.  **Clone o repositório:**
-    ```bash
-    git clone [https://github.com/Ramalho-Sites/LISTA-DE-FILMES.git](https://github.com/Ramalho-Sites/LISTA-DE-FILMES.git)
-    ```
+### Quer rodar sua própria versão?
 
-2.  **Navegue até a pasta:**
-    ```bash
-    cd LISTA-DE-FILMES
-    ```
+<details>
+<summary>Clique para ver as instruções</summary>
 
-3.  **Abra o `index.html`:**
-    Basta abrir o arquivo `index.html` diretamente no seu navegador de preferência.
+**Pré-requisitos**
+- Conta no [Firebase](https://firebase.google.com/) com projeto criado
+- Chave de API da [TMDB](https://www.themoviedb.org/)
 
-> **Nota Importante sobre a API Key:**
-> A maioria das APIs de filmes (como a TMDB) exige uma "API Key" (Chave de API) para funcionar. Se você baixou este código, provavelmente precisará:
-> 1.  Criar uma conta no site da API (ex: TMDB).
-> 2.  Gerar sua chave de API gratuita.
-> 3.  **Localizar** no arquivo `script.js` onde a chave é definida (provavelmente uma variável como `const API_KEY = "SUA_CHAVE_AQUI"`) e **substituir** pela sua chave pessoal.
+**Passos**
+
+1. Clone o repositório:
+   ```bash
+   git clone https://github.com/Ramalho-Sites/LISTA-DE-FILMES.git
+   cd LISTA-DE-FILMES
+   ```
+
+2. Configure o Firebase em `public/js/firebase-config.js` com as credenciais do seu projeto.
+
+3. Configure a TMDB API Key em `public/js/addMovies.js`:
+   ```js
+   const TMDB_API_KEY = "sua_chave_aqui";
+   ```
+
+4. Abra `public/login.html` no navegador ou faça deploy via GitHub Pages.
+
+</details>
 
 ---
 
