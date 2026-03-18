@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Minha Lista de Filmes</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg:        #0e0e14;
+      --surface:   #16161f;
+      --surface2:  #1e1e2a;
+      --violet:    #a78bfa;
+      --violet-dim:#7c5fcc;
+      --violet-glow: rgba(167,139,250,0.12);
+      --text:      #f0eeff;
+      --muted:     rgba(240,238,255,0.45);
+      --border:    rgba(167,139,250,0.14);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── TEIA ── */
+    #webCanvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.7;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 40px;
+      border-bottom: 0.5px solid var(--border);
+      backdrop-filter: blur(12px);
+      background: rgba(14,14,20,0.6);
+    }
+
+    .nav-brand {
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      color: var(--text);
+    }
+    .nav-brand span { color: var(--violet); }
+
+    .nav-btn {
+      background: var(--violet-glow);
+      border: 1px solid var(--border);
+      color: var(--violet);
+      padding: 8px 20px;
+      border-radius: 30px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .nav-btn:hover {
+      background: rgba(167,139,250,0.22);
+      border-color: rgba(167,139,250,0.4);
+    }
+
+    /* ── HERO ── */
+    .hero {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 90px 24px 60px;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--violet-glow);
+      border: 1px solid var(--border);
+      border-radius: 30px;
+      padding: 5px 14px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--violet);
+      margin-bottom: 28px;
+    }
+
+    .hero-title {
+      font-size: clamp(36px, 7vw, 68px);
+      font-weight: 800;
+      line-height: 1.05;
+      letter-spacing: -0.035em;
+      color: var(--text);
+      margin-bottom: 20px;
+    }
+
+    .hero-title .highlight {
+      background: linear-gradient(135deg, #c4b5fd, #a78bfa, #7c5fcc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero-sub {
+      font-size: 16px;
+      color: var(--muted);
+      max-width: 420px;
+      line-height: 1.65;
+      margin-bottom: 40px;
+    }
+
+    .hero-ctas {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .cta-primary {
+      background: linear-gradient(135deg, #a78bfa, #7c5fcc);
+      color: #fff;
+      border: none;
+      padding: 14px 32px;
+      border-radius: 40px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      letter-spacing: 0.01em;
+      transition: opacity 0.2s, transform 0.2s;
+      display: inline-block;
+    }
+    .cta-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+
+    .cta-secondary {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid rgba(255,255,255,0.1);
+      padding: 14px 32px;
+      border-radius: 40px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s;
+      display: inline-block;
+    }
+    .cta-secondary:hover {
+      border-color: var(--border);
+      color: var(--violet);
+    }
+
+    /* ── PREVIEW POSTERS ── */
+    .posters-strip {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      padding: 0 24px 70px;
+      flex-wrap: wrap;
+    }
+
+    .poster {
+      width: 90px;
+      height: 134px;
+      border-radius: 10px;
+      border: 0.5px solid var(--border);
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s;
+    }
+    .poster:hover { transform: translateY(-4px) scale(1.03); }
+
+    .poster-inner {
+      width: 100%; height: 100%;
+      display: flex;
+      align-items: flex-end;
+      padding: 8px;
+      background: linear-gradient(to top, rgba(0,0,0,0.92) 40%, transparent);
+    }
+
+    .poster-name {
+      font-size: 8px;
+      font-weight: 700;
+      color: #fff;
+      line-height: 1.3;
+    }
+
+    .poster-fav {
+      position: absolute;
+      top: 6px; left: 6px;
+      font-size: 11px;
+    }
+
+    .poster-badge {
+      position: absolute;
+      bottom: 28px; right: 6px;
+      background: rgba(0,0,0,0.82);
+      color: var(--violet);
+      font-size: 7px;
+      font-weight: 700;
+      padding: 2px 5px;
+      border-radius: 4px;
+      border: 0.5px solid var(--border);
+    }
+
+    .p1 { background: linear-gradient(160deg, #1e1535, #0e0a20); }
+    .p2 { background: linear-gradient(160deg, #351520, #200a10); }
+    .p3 { background: linear-gradient(160deg, #152535, #0a1420); }
+    .p4 { background: linear-gradient(160deg, #251535, #180a22); }
+    .p5 { background: linear-gradient(160deg, #352510, #201508); }
+    .p6 { background: linear-gradient(160deg, #153525, #0a2015); }
+
+    /* ── FEATURES ── */
+    .features {
+      position: relative;
+      z-index: 2;
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 0 24px 80px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 14px;
+    }
+
+    .feat {
+      background: rgba(255,255,255,0.025);
+      border: 0.5px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .feat:hover {
+      border-color: rgba(167,139,250,0.3);
+      background: rgba(167,139,250,0.06);
+    }
+    .feat::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 20%; right: 20%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(167,139,250,0.5), transparent);
+    }
+
+    .feat-emoji { font-size: 22px; margin-bottom: 12px; display: block; }
+    .feat-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .feat-desc  { font-size: 11px; color: var(--muted); line-height: 1.55; }
+
+    /* ── FOOTER ── */
+    footer {
+      position: relative;
+      z-index: 2;
+      border-top: 0.5px solid var(--border);
+      padding: 20px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      background: rgba(14,14,20,0.6);
+      backdrop-filter: blur(12px);
+    }
+
+    .footer-brand {
+      font-size: 12px;
+      font-weight: 700;
+      color: rgba(255,255,255,0.25);
+      letter-spacing: 0.06em;
+    }
+
+    .footer-links { display: flex; gap: 20px; }
+    .footer-link  {
+      font-size: 11px;
+      color: rgba(167,139,250,0.45);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .footer-link:hover { color: var(--violet); }
+
+    @media (max-width: 600px) {
+      nav { padding: 16px 20px; }
+      .hero { padding: 60px 20px 40px; }
+      footer { padding: 16px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="webCanvas"></canvas>
+
+<nav>
+  <span class="nav-brand">🎬 <span>Minha Lista</span></span>
+  <a href="login.html" class="nav-btn">Entrar</a>
+</nav>
+
+<section class="hero">
+  <div class="hero-badge">✦ Seu cinema pessoal</div>
+  <h1 class="hero-title">
+    Tudo que você<br>quer <span class="highlight">assistir</span>
+  </h1>
+  <p class="hero-sub">
+    Filmes e séries organizados, com player integrado, progresso salvo e sincronização em tempo real entre todos os seus dispositivos.
+  </p>
+  <div class="hero-ctas">
+    <a href="login.html" class="cta-primary">Começar agora</a>
+    <a href="#features" class="cta-secondary">Ver funcionalidades</a>
+  </div>
+</section>
+
+<div class="posters-strip">
+  <div class="poster p1">
+    <span class="poster-fav">❤️</span>
+    <div class="poster-inner"><span class="poster-name">Interestelar</span></div>
+  </div>
+  <div class="poster p2">
+    <div class="poster-inner"><span class="poster-name">Oldboy</span></div>
+  </div>
+  <div class="poster p3">
+    <span class="poster-fav">❤️</span>
+    <span class="poster-badge">T3 E7</span>
+    <div class="poster-inner"><span class="poster-name">Dexter</span></div>
+  </div>
+  <div class="poster p4">
+    <div class="poster-inner"><span class="poster-name">O Pianista</span></div>
+  </div>
+  <div class="poster p5">
+    <span class="poster-fav">❤️</span>
+    <div class="poster-inner"><span class="poster-name">Magnolia</span></div>
+  </div>
+  <div class="poster p6">
+    <span class="poster-badge">T1 E2</span>
+    <div class="poster-inner"><span class="poster-name">Breaking Bad</span></div>
+  </div>
+</div>
+
+<section class="features" id="features">
+  <div class="feat">
+    <span class="feat-emoji">▶️</span>
+    <div class="feat-title">Player integrado</div>
+    <div class="feat-desc">6 servidores de streaming com fallback automático</div>
+  </div>
+  <div class="feat">
+    <span class="feat-emoji">📺</span>
+    <div class="feat-title">Séries completas</div>
+    <div class="feat-desc">Continua do episódio onde você parou, com limites da TMDB</div>
+  </div>
+  <div class="feat">
+    <span class="feat-emoji">❤️</span>
+    <div class="feat-title">Favoritos</div>
+    <div class="feat-desc">Marque e filtre só o que você mais ama</div>
+  </div>
+  <div class="feat">
+    <span class="feat-emoji">🔄</span>
+    <div class="feat-title">Tempo real</div>
+    <div class="feat-desc">Sincroniza automaticamente em todos os dispositivos</div>
+  </div>
+  <div class="feat">
+    <span class="feat-emoji">🔍</span>
+    <div class="feat-title">Busca inteligente</div>
+    <div class="feat-desc">Pesquise por título ou sinopse com autocomplete da TMDB</div>
+  </div>
+  <div class="feat">
+    <span class="feat-emoji">📱</span>
+    <div class="feat-title">Mobile first</div>
+    <div class="feat-desc">Layout responsivo otimizado para celular e desktop</div>
+  </div>
+</section>
+
+<footer>
+  <span class="footer-brand">MINHA LISTA DE FILMES</span>
+  <div class="footer-links">
+    <a href="https://github.com/Ramalho-Sites" class="footer-link" target="_blank">GitHub</a>
+    <a href="https://www.linkedin.com/in/davi-ramalho-146221379/" class="footer-link" target="_blank">LinkedIn</a>
+    <a href="login.html" class="footer-link">Entrar</a>
+  </div>
+</footer>
+
+<script>
+const canvas = document.getElementById('webCanvas');
+const ctx = canvas.getContext('2d');
+let W, H, animId;
+
+function resize() {
+  W = canvas.width  = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+
+let t = 0;
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  const cx = W * 0.5;
+  const cy = H * 0.38;
+  const maxR = Math.max(W, H) * 0.82;
+  const rings = 9;
+  const spokes = 18;
+
+  for (let r = 1; r <= rings; r++) {
+    const radius = (maxR / rings) * r;
+    const alpha = (0.055 - r * 0.004) + Math.sin(t + r) * 0.008;
+    ctx.beginPath();
+    for (let s = 0; s <= spokes; s++) {
+      const angle = (s / spokes) * Math.PI * 2 - Math.PI / 2;
+      const jitter = 1 + Math.sin(s * 2.3 + r * 1.7 + t * 0.3) * 0.04;
+      const x = cx + Math.cos(angle) * radius * jitter;
+      const y = cy + Math.sin(angle) * radius * jitter;
+      s === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = `rgba(167,139,250,${Math.max(0.01, alpha)})`;
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+  }
+
+  for (let s = 0; s < spokes; s++) {
+    const angle = (s / spokes) * Math.PI * 2 - Math.PI / 2;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + Math.cos(angle) * maxR, cy + Math.sin(angle) * maxR);
+    ctx.strokeStyle = 'rgba(167,139,250,0.055)';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+  }
+
+  for (let s = 0; s < spokes; s++) {
+    const angle = (s / spokes) * Math.PI * 2 - Math.PI / 2;
+    for (let r = 1; r <= rings; r++) {
+      const radius = (maxR / rings) * r;
+      const jitter = 1 + Math.sin(s * 2.3 + r * 1.7 + t * 0.3) * 0.04;
+      const x = cx + Math.cos(angle) * radius * jitter;
+      const y = cy + Math.sin(angle) * radius * jitter;
+      const pulse = 0.4 + Math.sin(t * 1.2 + s + r) * 0.3;
+      ctx.beginPath();
+      ctx.arc(x, y, r === 1 ? 2.5 : 1.2, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(167,139,250,${pulse * 0.5})`;
+      ctx.fill();
+    }
+  }
+
+  // Centro
+  const centerPulse = 0.7 + Math.sin(t * 1.5) * 0.3;
+  ctx.beginPath();
+  ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+  ctx.fillStyle = `rgba(167,139,250,${centerPulse})`;
+  ctx.fill();
+
+  t += 0.008;
+  animId = requestAnimationFrame(draw);
+}
+
+resize();
+draw();
+window.addEventListener('resize', () => { resize(); });
+</script>
+</body>
+</html>
