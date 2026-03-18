@@ -2,7 +2,7 @@
 
 Um aplicativo web completo para gerenciar, organizar e assistir filmes e séries, com autenticação, player integrado e sincronização em tempo real.
 
-![Demo do Projeto](imagens/demo.png)
+![Demo do Projeto](imagens/Demo.png)
 
 ### 🔗 Acesse o site: [Clique aqui para interagir com o projeto!](https://ramalho-sites.github.io/LISTA-DE-FILMES/public/landing.html)
 
