@@ -365,119 +365,99 @@ function createPlayerModal() {
     background:rgba(0,0,0,0.92);z-index:99999;align-items:center;
     justify-content:center;flex-direction:column;`;
   modal.innerHTML = `
-    <div style="position:relative;width:92%;max-width:1000px;border-radius:12px;
-      overflow:hidden;box-shadow:0 0 60px rgba(0,0,0,0.9);">
+    <div style="position:relative;width:96%;max-width:1100px;border-radius:12px;
+      overflow:hidden;box-shadow:0 0 60px rgba(0,0,0,0.9);display:flex;flex-direction:column;">
 
-      <!-- TOPO: título + fechar -->
+      <!-- TOPO -->
       <div style="display:flex;align-items:center;justify-content:space-between;
-        padding:10px 16px;background:#0e0e14;border-bottom:0.5px solid rgba(167,139,250,0.12);">
+        padding:10px 16px;background:#0e0e14;border-bottom:0.5px solid rgba(167,139,250,0.12);flex-shrink:0;">
         <span id="playerTitle" style="color:#f0eeff;font-weight:800;font-size:15px;
-          white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%;
-          letter-spacing:-0.01em;"></span>
+          white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70%;letter-spacing:-0.01em;"></span>
         <button id="playerCloseBtn" style="background:#dc2626;color:white;border:none;
-          border-radius:8px;padding:5px 14px;cursor:pointer;font-size:13px;font-weight:700;
-          letter-spacing:0.02em;">✕ Fechar</button>
+          border-radius:8px;padding:5px 14px;cursor:pointer;font-size:13px;font-weight:700;">
+          ✕ Fechar</button>
       </div>
 
-      <!-- PLAYER com overlay estilo Netflix -->
-      <div style="position:relative;width:100%;aspect-ratio:16/9;background:#000;">
-        <iframe id="playerIframe" style="width:100%;height:100%;border:none;display:block;"
-          allowfullscreen allow="autoplay;encrypted-media;fullscreen;picture-in-picture"
-          referrerpolicy="no-referrer"></iframe>
-        <div id="playerSpinner" style="position:absolute;top:50%;left:50%;
-          transform:translate(-50%,-50%);color:#aaa;font-size:14px;pointer-events:none;">
-          Carregando player...</div>
+      <!-- CORPO -->
+      <div style="display:flex;flex:1;min-height:0;">
 
-        <!-- OVERLAY SÉRIES — aparece só para séries -->
-        <div id="playerOverlay" style="display:none;position:absolute;bottom:0;left:0;right:0;
-          background:linear-gradient(to top,rgba(8,6,18,0.98) 45%,rgba(8,6,18,0.5) 80%,transparent);
-          padding:16px 18px;pointer-events:none;">
+        <!-- ESQUERDA: vídeo + controles -->
+        <div style="flex:1;display:flex;flex-direction:column;min-width:0;">
+          <div style="position:relative;width:100%;aspect-ratio:16/9;background:#000;">
+            <iframe id="playerIframe" style="width:100%;height:100%;border:none;display:block;"
+              allowfullscreen allow="autoplay;encrypted-media;fullscreen;picture-in-picture"
+              referrerpolicy="no-referrer"></iframe>
+            <div id="playerSpinner" style="position:absolute;top:50%;left:50%;
+              transform:translate(-50%,-50%);color:#aaa;font-size:14px;pointer-events:none;">
+              Carregando player...</div>
+          </div>
 
-          <!-- linha 1: título do ep + botão próximo pill -->
-          <div style="display:flex;justify-content:space-between;align-items:flex-start;
-            margin-bottom:12px;gap:10px;">
-            <div style="pointer-events:none;">
-              <div id="playerEpTitle" style="font-size:13px;font-weight:800;color:#f0eeff;
-                margin-bottom:3px;letter-spacing:-0.01em;"></div>
-              <div id="playerEpMeta" style="font-size:10px;color:rgba(240,238,255,0.4);"></div>
-            </div>
-            <!-- Botão próximo pill com thumbnail -->
-            <button onclick="window.__nextEpisode()" id="playerNextBtn"
-              style="display:flex;align-items:center;gap:8px;padding:5px 14px 5px 5px;
-              border-radius:10px;background:rgba(0,0,0,0.75);border:0.5px solid rgba(255,255,255,0.12);
-              color:#fff;cursor:pointer;flex-shrink:0;pointer-events:all;transition:border-color 0.2s,background 0.2s;
-              backdrop-filter:blur(8px);"
-              onmouseover="this.style.borderColor='rgba(167,139,250,0.5)';this.style.background='rgba(20,16,40,0.9)'"
-              onmouseout="this.style.borderColor='rgba(255,255,255,0.12)';this.style.background='rgba(0,0,0,0.75)'">
-              <div id="playerNextThumb" style="width:40px;height:24px;border-radius:4px;
-                background:linear-gradient(160deg,#1a2e48,#0a1428);flex-shrink:0;"></div>
-              <div style="text-align:left;">
-                <div style="font-size:8px;color:rgba(255,255,255,0.35);margin-bottom:1px;">A seguir</div>
-                <div id="playerNextLabel" style="font-size:10px;font-weight:700;white-space:nowrap;">—</div>
+          <!-- Barra de episódio (séries) -->
+          <div id="playerEpisodeRow" style="display:none;align-items:center;gap:8px;
+            padding:8px 14px;background:#111;border-top:0.5px solid rgba(167,139,250,0.08);flex-wrap:wrap;">
+            <div style="display:flex;align-items:center;gap:5px;">
+              <span style="color:#666;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;">T</span>
+              <div style="display:flex;align-items:center;background:#1e1e2a;border:0.5px solid rgba(255,255,255,0.12);border-radius:20px;overflow:hidden;">
+                <button onclick="window.__stepSeason(-1)" style="background:none;border:none;color:#666;width:24px;height:26px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#666'">‹</button>
+                <span id="playerSeasonDisplay" style="color:#fff;font-size:12px;font-weight:700;min-width:16px;text-align:center;user-select:none;">1</span>
+                <input id="playerSeasonInput" type="hidden" value="1"/>
+                <button onclick="window.__stepSeason(1)" style="background:none;border:none;color:#666;width:24px;height:26px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#666'">›</button>
               </div>
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="white"
-                stroke-width="2.5" style="opacity:0.4;margin-left:2px;"><polygon points="5,3 19,12 5,21"/></svg>
+            </div>
+            <div style="display:flex;align-items:center;gap:5px;">
+              <span style="color:#666;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;">E</span>
+              <div style="display:flex;align-items:center;background:#1e1e2a;border:0.5px solid rgba(255,255,255,0.12);border-radius:20px;overflow:hidden;">
+                <button onclick="window.__stepEpisode(-1)" style="background:none;border:none;color:#666;width:24px;height:26px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#666'">‹</button>
+                <span id="playerEpisodeDisplay" style="color:#fff;font-size:12px;font-weight:700;min-width:16px;text-align:center;user-select:none;">1</span>
+                <input id="playerEpisodeInput" type="hidden" value="1"/>
+                <button onclick="window.__stepEpisode(1)" style="background:none;border:none;color:#666;width:24px;height:26px;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#666'">›</button>
+              </div>
+            </div>
+            <span id="playerEpInfo" style="color:#555;font-size:10px;"></span>
+            <button onclick="window.__loadEpisode()" style="padding:4px 14px;border-radius:20px;
+              border:0.5px solid rgba(99,102,241,0.5);background:transparent;color:#c7d2fe;
+              font-size:10px;font-weight:700;cursor:pointer;transition:all 0.15s;"
+              onmouseover="this.style.background='rgba(79,70,229,0.8)';this.style.color='#fff'"
+              onmouseout="this.style.background='transparent';this.style.color='#c7d2fe'">▶ IR</button>
+            <!-- Próximo pill -->
+            <button onclick="window.__nextEpisode()" id="playerNextBtn"
+              style="display:flex;align-items:center;gap:7px;padding:4px 12px 4px 4px;
+              border-radius:8px;background:rgba(0,0,0,0.5);border:0.5px solid rgba(255,255,255,0.1);
+              color:#fff;cursor:pointer;margin-left:auto;transition:border-color 0.2s,background 0.2s;"
+              onmouseover="this.style.borderColor='rgba(167,139,250,0.5)';this.style.background='rgba(20,16,40,0.9)'"
+              onmouseout="this.style.borderColor='rgba(255,255,255,0.1)';this.style.background='rgba(0,0,0,0.5)'">
+              <div id="playerNextThumb" style="width:36px;height:22px;border-radius:4px;background:linear-gradient(160deg,#1a2e48,#0a1428);flex-shrink:0;"></div>
+              <div style="text-align:left;">
+                <div style="font-size:7px;color:rgba(255,255,255,0.3);margin-bottom:1px;">A seguir</div>
+                <div id="playerNextLabel" style="font-size:10px;font-weight:700;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis;">—</div>
+              </div>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" style="opacity:0.35;margin-left:2px;"><polygon points="5,3 19,12 5,21"/></svg>
             </button>
           </div>
 
-          <!-- linha 2: seletores + servidores -->
-          <div style="display:flex;justify-content:space-between;align-items:center;
-            flex-wrap:wrap;gap:8px;pointer-events:all;">
-
-            <!-- seletores T/E -->
-            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-              <div style="display:flex;align-items:center;gap:5px;">
-                <span style="color:#666;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;">T</span>
-                <div style="display:flex;align-items:center;background:rgba(30,30,42,0.9);
-                  border:0.5px solid rgba(255,255,255,0.15);border-radius:20px;overflow:hidden;backdrop-filter:blur(4px);">
-                  <button onclick="window.__stepSeason(-1)" style="background:none;border:none;color:#666;
-                    width:24px;height:26px;cursor:pointer;font-size:13px;display:flex;align-items:center;
-                    justify-content:center;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#666'">‹</button>
-                  <span id="playerSeasonDisplay" style="color:#fff;font-size:12px;font-weight:700;
-                    min-width:16px;text-align:center;user-select:none;">1</span>
-                  <input id="playerSeasonInput" type="hidden" value="1"/>
-                  <button onclick="window.__stepSeason(1)" style="background:none;border:none;color:#666;
-                    width:24px;height:26px;cursor:pointer;font-size:13px;display:flex;align-items:center;
-                    justify-content:center;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#666'">›</button>
-                </div>
-              </div>
-              <div style="display:flex;align-items:center;gap:5px;">
-                <span style="color:#666;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;">E</span>
-                <div style="display:flex;align-items:center;background:rgba(30,30,42,0.9);
-                  border:0.5px solid rgba(255,255,255,0.15);border-radius:20px;overflow:hidden;backdrop-filter:blur(4px);">
-                  <button onclick="window.__stepEpisode(-1)" style="background:none;border:none;color:#666;
-                    width:24px;height:26px;cursor:pointer;font-size:13px;display:flex;align-items:center;
-                    justify-content:center;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#666'">‹</button>
-                  <span id="playerEpisodeDisplay" style="color:#fff;font-size:12px;font-weight:700;
-                    min-width:16px;text-align:center;user-select:none;">1</span>
-                  <input id="playerEpisodeInput" type="hidden" value="1"/>
-                  <button onclick="window.__stepEpisode(1)" style="background:none;border:none;color:#666;
-                    width:24px;height:26px;cursor:pointer;font-size:13px;display:flex;align-items:center;
-                    justify-content:center;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#666'">›</button>
-                </div>
-              </div>
-              <span id="playerEpInfo" style="color:#555;font-size:10px;"></span>
-              <button onclick="window.__loadEpisode()" style="padding:4px 14px;border-radius:20px;
-                border:0.5px solid rgba(99,102,241,0.6);background:transparent;color:#c7d2fe;
-                font-size:10px;font-weight:700;cursor:pointer;transition:all 0.15s;backdrop-filter:blur(4px);"
-                onmouseover="this.style.background='rgba(79,70,229,0.8)';this.style.color='#fff'"
-                onmouseout="this.style.background='transparent';this.style.color='#c7d2fe'">▶ IR</button>
-            </div>
-
-            <!-- servidores -->
+          <!-- Barra servidores -->
+          <div style="display:flex;align-items:center;gap:6px;padding:8px 14px;
+            background:#0e0e14;flex-wrap:wrap;border-top:0.5px solid rgba(167,139,250,0.08);">
+            <span style="color:#555;font-size:11px;">Trocar servidor:</span>
             <div id="playerServerBtns" style="display:flex;gap:5px;flex-wrap:wrap;"></div>
+            <span id="playerServerLabel" style="color:#444;font-size:11px;margin-left:auto;"></span>
           </div>
         </div>
-      </div>
 
-      <!-- BARRA SERVIDORES para filmes (sem overlay) -->
-      <div id="playerMovieBar" style="display:flex;align-items:center;gap:8px;padding:10px 16px;
-        background:#0e0e14;flex-wrap:wrap;border-top:0.5px solid rgba(167,139,250,0.08);">
-        <span style="color:#666;font-size:12px;margin-right:4px;">Trocar servidor:</span>
-        <div id="playerServerBtnsMovie" style="display:flex;gap:5px;flex-wrap:wrap;"></div>
-        <span id="playerServerLabel" style="color:#555;font-size:11px;margin-left:auto;"></span>
-      </div>
+        <!-- PAINEL LATERAL (só séries) -->
+        <div id="playerSidePanel" style="display:none;width:220px;flex-shrink:0;
+          background:#111;border-left:0.5px solid rgba(167,139,250,0.1);
+          flex-direction:column;max-height:100%;">
+          <div style="padding:10px 12px;border-bottom:0.5px solid rgba(167,139,250,0.08);">
+            <div id="playerSideTitle" style="font-size:11px;font-weight:800;color:#f0eeff;
+              margin-bottom:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></div>
+            <div id="playerSeasonTabs" style="display:flex;gap:4px;flex-wrap:wrap;"></div>
+          </div>
+          <div id="playerEpList" style="flex:1;overflow-y:auto;padding:6px 8px;
+            scrollbar-width:thin;scrollbar-color:rgba(167,139,250,0.2) transparent;"></div>
+        </div>
 
+      </div>
     </div>`;
   document.body.appendChild(modal);
   modal.addEventListener("click", (e) => { if (e.target === modal) handleClosePlayer(); });
@@ -540,17 +520,17 @@ async function openPlayerModal(movie) {
   playingSeason = startSeason;
   playingEpisode = startEpisode;
 
-  // Mostra overlay para séries, barra simples para filmes
-  const overlay   = $("playerOverlay");
-  const movieBar  = $("playerMovieBar");
-  if (overlay)  overlay.style.display  = currentMediaType === "tv"    ? "block" : "none";
-  if (movieBar) movieBar.style.display = currentMediaType === "movie"  ? "flex"  : "none";
+  // Mostra painel lateral e barra de episódios para séries
+  const sidePanel = $("playerSidePanel");
+  const epRow     = $("playerEpisodeRow");
+  if (sidePanel) sidePanel.style.display = currentMediaType === "tv" ? "flex" : "none";
+  if (epRow)     epRow.style.display     = currentMediaType === "tv" ? "flex" : "none";
 
   if (currentMediaType === "tv") {
     setSeasonValue(startSeason);
     setEpisodeValue(startEpisode);
     updateEpisodeInfo();
-    updateEpOverlay();
+    buildSidePanel(tmdbId, movie.title || "");
   }
 
   const titleEl = $("playerTitle");
@@ -644,37 +624,119 @@ function updateEpisodeInfo() {
     if (playingTotalEpisodes > 0) parts.push(`T${season}: ${playingTotalEpisodes} ep.`);
     info.textContent = parts.length ? parts.join(" · ") : "";
   }
-  updateEpOverlay();
+  updateNextLabel();
 }
 
-// Atualiza título e meta do episódio no overlay + label do próximo
-async function updateEpOverlay() {
+// Atualiza o label do próximo episódio no pill
+async function updateNextLabel() {
+  const nextLabel = $("playerNextLabel");
+  if (!nextLabel || !playingTmdbId) return;
   const season  = parseInt($("playerSeasonInput")?.value)  || playingSeason;
   const episode = parseInt($("playerEpisodeInput")?.value) || playingEpisode;
-
-  const titleEl = $("playerEpTitle");
-  const metaEl  = $("playerEpMeta");
-  if (titleEl) titleEl.textContent = $("playerTitle")?.textContent || "";
-  if (metaEl)  metaEl.textContent  = `T${season} · E${episode}${playingTotalEpisodes > 0 ? ` · ${playingTotalEpisodes} ep.` : ""}`;
-
-  // Atualiza label do próximo episódio
-  const nextLabel = $("playerNextLabel");
-  if (!nextLabel) return;
-  const nextEp = episode < (playingTotalEpisodes || 999) ? episode + 1 : 1;
-  const nextSeason = episode < (playingTotalEpisodes || 999) ? season : season + 1;
-  if (playingTmdbId && nextLabel) {
-    // Tenta buscar nome do próximo ep
-    try {
-      const seasonData = await fetchTVSeasonDetails(playingTmdbId, nextSeason);
-      const nextEpData = seasonData?.episodes?.find(e => e.episode_number === nextEp);
-      nextLabel.textContent = nextEpData
-        ? `E${nextEp} · ${nextEpData.name}`
-        : `E${nextEp}`;
-    } catch(e) {
-      nextLabel.textContent = `E${nextEp}`;
-    }
+  const nextEp  = episode < (playingTotalEpisodes || 999) ? episode + 1 : 1;
+  const nextSea = episode < (playingTotalEpisodes || 999) ? season : season + 1;
+  try {
+    const data = await fetchTVSeasonDetails(playingTmdbId, nextSea);
+    const ep   = data?.episodes?.find(e => e.episode_number === nextEp);
+    nextLabel.textContent = ep ? `E${nextEp} · ${ep.name}` : `E${nextEp}`;
+  } catch(e) {
+    nextLabel.textContent = `E${nextEp}`;
   }
 }
+
+// Constrói o painel lateral com tabs de temporada e lista de episódios
+async function buildSidePanel(tmdbId, seriesTitle) {
+  const sideTitle  = $("playerSideTitle");
+  const seasonTabs = $("playerSeasonTabs");
+  const epList     = $("playerEpList");
+  if (!sideTitle || !seasonTabs || !epList) return;
+
+  sideTitle.textContent = seriesTitle;
+  seasonTabs.innerHTML  = "";
+  epList.innerHTML      = "<div style='color:#555;font-size:11px;padding:8px;'>Carregando...</div>";
+
+  const details = await fetchTVDetailsTMDb(tmdbId);
+  if (!details) { epList.innerHTML = ""; return; }
+
+  const totalSeasons = details.number_of_seasons || 1;
+  playingTotalSeasons = totalSeasons;
+
+  // Cria tabs de temporada
+  for (let s = 1; s <= totalSeasons; s++) {
+    const tab = document.createElement("button");
+    tab.textContent = `T${s}`;
+    tab.dataset.season = s;
+    tab.style.cssText = `font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;
+      cursor:pointer;border:none;transition:all 0.15s;`;
+    const isActive = s === (parseInt($("playerSeasonInput")?.value) || 1);
+    tab.style.background = isActive ? "rgba(167,139,250,0.15)" : "transparent";
+    tab.style.color      = isActive ? "#a78bfa" : "rgba(255,255,255,0.25)";
+    tab.onclick = () => loadEpListForSeason(tmdbId, s);
+    seasonTabs.appendChild(tab);
+  }
+
+  // Carrega episódios da temporada atual
+  await loadEpListForSeason(tmdbId, parseInt($("playerSeasonInput")?.value) || 1);
+}
+
+async function loadEpListForSeason(tmdbId, season) {
+  const epList     = $("playerEpList");
+  const seasonTabs = $("playerSeasonTabs");
+  if (!epList) return;
+
+  // Atualiza tab ativa
+  if (seasonTabs) {
+    Array.from(seasonTabs.children).forEach(tab => {
+      const isActive = parseInt(tab.dataset.season) === season;
+      tab.style.background = isActive ? "rgba(167,139,250,0.15)" : "transparent";
+      tab.style.color      = isActive ? "#a78bfa" : "rgba(255,255,255,0.25)";
+    });
+  }
+
+  epList.innerHTML = "<div style='color:#555;font-size:11px;padding:8px;'>Carregando...</div>";
+  const data = await fetchTVSeasonDetails(tmdbId, season);
+  if (!data?.episodes) { epList.innerHTML = ""; return; }
+
+  playingTotalEpisodes = data.episodes.length;
+  updateEpisodeInfo();
+  epList.innerHTML = "";
+
+  const currentEp = parseInt($("playerEpisodeInput")?.value) || 1;
+  const currentS  = parseInt($("playerSeasonInput")?.value)  || 1;
+
+  data.episodes.forEach(ep => {
+    const isActive = ep.episode_number === currentEp && season === currentS;
+    const item = document.createElement("div");
+    item.style.cssText = `display:flex;align-items:center;gap:8px;padding:7px 8px;
+      border-radius:7px;cursor:pointer;transition:background 0.15s;margin-bottom:2px;
+      ${isActive ? "background:rgba(167,139,250,0.1);border:0.5px solid rgba(167,139,250,0.25);" : ""}`;
+    item.onmouseover = () => { if (!isActive) item.style.background = "rgba(255,255,255,0.04)"; };
+    item.onmouseout  = () => { if (!isActive) item.style.background = ""; };
+    item.innerHTML = `
+      <span style="font-size:10px;font-weight:700;width:22px;flex-shrink:0;
+        color:${isActive ? "#a78bfa" : "rgba(255,255,255,0.2)"};">E${ep.episode_number}</span>
+      <span style="font-size:10px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+        color:${isActive ? "#f0eeff" : "rgba(255,255,255,0.4)"};">${ep.name}</span>
+      ${isActive ? `<span style="font-size:8px;padding:1px 6px;border-radius:5px;background:rgba(167,139,250,0.9);color:#1a1025;font-weight:700;flex-shrink:0;">▶</span>` : ""}`;
+    item.onclick = () => {
+      setSeasonValue(season);
+      setEpisodeValue(ep.episode_number);
+      playingSeason  = season;
+      playingEpisode = ep.episode_number;
+      loadPlayer(playingTmdbId, currentPlayerIndex);
+      updateEpisodeInfo();
+      loadEpListForSeason(tmdbId, season);
+    };
+    epList.appendChild(item);
+  });
+
+  // Scroll para o episódio ativo
+  const activeEl = epList.querySelector(`[style*="rgba(167,139,250,0.1)"]`);
+  if (activeEl) activeEl.scrollIntoView({ block: "center", behavior: "smooth" });
+}
+
+// Função legada mantida — chama updateNextLabel
+async function updateEpOverlay() { updateNextLabel(); }
 
 async function closePlayerModal() {
   const modal = $("playerModal");
@@ -700,10 +762,10 @@ async function closePlayerModal() {
   playingSeason = 1; playingEpisode = 1;
   playingTotalSeasons = 0; playingTotalEpisodes = 0;
 
-  const overlay  = $("playerOverlay");
-  const movieBar = $("playerMovieBar");
-  if (overlay)  overlay.style.display  = "none";
-  if (movieBar) movieBar.style.display = "none";
+  const sidePanel = $("playerSidePanel");
+  const epRow     = $("playerEpisodeRow");
+  if (sidePanel) sidePanel.style.display = "none";
+  if (epRow)     epRow.style.display     = "none";
 }
 
 function loadPlayer(tmdbId, index) {
