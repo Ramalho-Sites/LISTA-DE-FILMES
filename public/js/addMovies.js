@@ -28,17 +28,20 @@ const TMDB_LANGUAGE    = "pt-BR";
 let genreMap = new Map();
 
 const PLAYERS_MOVIE = [
-  { name: "EmbedAPI",   url: (id) => `https://player.embed-api.stream/?id=${id}` },
-  { name: "MultiEmbed", url: (id) => `https://multiembed.mov/?video_id=${id}&tmdb=1` },
+  { name: "VidSrc.cc",  url: (id) => `https://vidsrc.cc/v2/embed/movie/${id}` },
+  { name: "VidLink",    url: (id) => `https://vidlink.pro/movie/${id}?autoplay=false` },
+  { name: "VidSrc.icu", url: (id) => `https://vidsrc.icu/embed/movie/${id}` },
+  { name: "VidFast",    url: (id) => `https://vidfast.pro/movie/${id}?autoPlay=false` },
   { name: "VidSrc",     url: (id) => `https://vidsrc.me/embed/movie?tmdb=${id}` },
-  { name: "AutoEmbed",  url: (id) => `https://player.autoembed.cc/embed/movie/${id}` },
-  { name: "VidKing",    url: (id) => `https://www.vidking.net/embed/movie/${id}` },
+  { name: "MultiEmbed", url: (id) => `https://multiembed.mov/?video_id=${id}&tmdb=1` },
 ];
 const PLAYERS_SERIES = [
-  { name: "EmbedAPI",   url: (id, s, e) => `https://player.embed-api.stream/?id=${id}&s=${s}&e=${e}` },
+  { name: "VidSrc.cc",  url: (id, s, e) => `https://vidsrc.cc/v2/embed/tv/${id}/${s}/${e}` },
+  { name: "VidLink",    url: (id, s, e) => `https://vidlink.pro/tv/${id}/${s}/${e}?autoplay=false` },
+  { name: "VidSrc.icu", url: (id, s, e) => `https://vidsrc.icu/embed/tv/${id}/${s}/${e}` },
+  { name: "VidFast",    url: (id, s, e) => `https://vidfast.pro/tv/${id}/${s}/${e}?autoPlay=false` },
   { name: "VidSrc",     url: (id, s, e) => `https://vidsrc.me/embed/tv?tmdb=${id}&season=${s}&episode=${e}` },
   { name: "MultiEmbed", url: (id, s, e) => `https://multiembed.mov/?video_id=${id}&tmdb=1&s=${s}&e=${e}` },
-  { name: "AutoEmbed",  url: (id, s, e) => `https://player.autoembed.cc/embed/tv/${id}/${s}/${e}` },
 ];
 
 let currentMediaType = "movie";
@@ -375,8 +378,7 @@ function createPlayerModal() {
       <div style="position:relative;width:100%;aspect-ratio:16/9;background:#000;">
         <iframe id="playerIframe" style="width:100%;height:100%;border:none;display:block;"
           allowfullscreen allow="autoplay;encrypted-media;fullscreen;picture-in-picture"
-          referrerpolicy="no-referrer"
-          sandbox="allow-scripts allow-same-origin allow-forms allow-presentation"></iframe>
+          referrerpolicy="no-referrer"></iframe>
         <div id="playerSpinner" style="position:absolute;top:50%;left:50%;
           transform:translate(-50%,-50%);color:#aaa;font-size:14px;pointer-events:none;">
           Carregando player...</div>
