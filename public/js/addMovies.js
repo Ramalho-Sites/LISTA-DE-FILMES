@@ -1005,98 +1005,358 @@ function createFavoriteBtn(movie) {
    MODAL DE ADIÇÃO
 ============================================================ */
 function buildAddMovieUI() {
+  /* ── FAB ── */
   if (!$("addMovieFab")) {
     const fab = document.createElement("button");
     fab.id = "addMovieFab";
     fab.textContent = "+ Adicionar";
-    fab.className = "fixed bottom-6 right-6 bg-indigo-600 text-white px-5 py-3 rounded-full shadow-xl hover:scale-105";
+    fab.style.cssText = `position:fixed;bottom:24px;right:24px;z-index:900;
+      background:linear-gradient(135deg,#a78bfa,#7c5fcc);color:#fff;
+      border:none;border-radius:50px;padding:12px 22px;font-size:14px;
+      font-weight:700;cursor:pointer;font-family:inherit;
+      box-shadow:0 4px 20px rgba(167,139,250,0.35);
+      transition:transform 0.15s,box-shadow 0.15s;letter-spacing:-0.01em;`;
+    fab.onmouseover = () => { fab.style.transform="scale(1.05)"; fab.style.boxShadow="0 6px 28px rgba(167,139,250,0.5)"; };
+    fab.onmouseout  = () => { fab.style.transform="scale(1)";    fab.style.boxShadow="0 4px 20px rgba(167,139,250,0.35)"; };
     fab.onclick = () => openAddModal();
     document.body.appendChild(fab);
   }
   if ($("addModal")) return;
 
+  /* ── CSS do modal (injetado uma vez) ── */
+  if (!document.getElementById("addModalStyle")) {
+    const st = document.createElement("style");
+    st.id = "addModalStyle";
+    st.textContent = `
+      #addModal { z-index:9000; }
+      #addModalInner {
+        background:#16161f;
+        border:0.5px solid rgba(167,139,250,0.18);
+        border-radius:16px;
+        width:100%;
+        max-width:680px;
+        max-height:92vh;
+        display:flex;
+        flex-direction:column;
+        overflow:hidden;
+        box-shadow:0 24px 80px rgba(0,0,0,0.7);
+      }
+      #addModalScroll {
+        overflow-y:auto;
+        flex:1;
+        padding:0 22px 22px;
+        scrollbar-width:thin;
+        scrollbar-color:rgba(167,139,250,0.2) transparent;
+      }
+      .add-label {
+        display:block;
+        font-size:11px;
+        font-weight:700;
+        letter-spacing:0.08em;
+        text-transform:uppercase;
+        color:rgba(167,139,250,0.6);
+        margin-bottom:6px;
+      }
+      .add-input {
+        width:100%;
+        background:#1e1e2a !important;
+        border:0.5px solid rgba(167,139,250,0.14) !important;
+        border-radius:10px !important;
+        color:#f0eeff !important;
+        padding:10px 13px !important;
+        font-size:14px !important;
+        font-family:inherit !important;
+        transition:border-color 0.2s !important;
+        box-sizing:border-box;
+      }
+      .add-input:focus {
+        outline:none !important;
+        border-color:rgba(167,139,250,0.5) !important;
+        background:rgba(167,139,250,0.06) !important;
+      }
+      .add-input::placeholder { color:rgba(240,238,255,0.2) !important; }
+      .add-textarea { resize:vertical; min-height:90px; }
+      .add-btn-primary {
+        background:linear-gradient(135deg,#a78bfa,#7c5fcc);
+        color:#fff; border:none; border-radius:10px;
+        padding:10px 18px; font-size:13px; font-weight:700;
+        cursor:pointer; font-family:inherit;
+        transition:opacity 0.15s,transform 0.15s;
+      }
+      .add-btn-primary:hover { opacity:0.9; transform:translateY(-1px); }
+      .add-btn-ghost {
+        background:#1e1e2a;
+        color:rgba(240,238,255,0.5);
+        border:0.5px solid rgba(167,139,250,0.15);
+        border-radius:10px; padding:10px 14px;
+        font-size:13px; font-weight:600;
+        cursor:pointer; font-family:inherit;
+        transition:border-color 0.15s,color 0.15s;
+      }
+      .add-btn-ghost:hover { border-color:rgba(167,139,250,0.4); color:#f0eeff; }
+      .add-btn-danger {
+        background:rgba(220,38,38,0.15);
+        color:#fca5a5;
+        border:0.5px solid rgba(220,38,38,0.3);
+        border-radius:10px; padding:10px 14px;
+        font-size:13px; font-weight:600;
+        cursor:pointer; font-family:inherit;
+        transition:background 0.15s;
+      }
+      .add-btn-danger:hover { background:rgba(220,38,38,0.25); }
+      .add-type-btn {
+        padding:8px 18px; border-radius:50px;
+        font-size:13px; font-weight:700;
+        border:0.5px solid rgba(167,139,250,0.18);
+        cursor:pointer; font-family:inherit;
+        transition:all 0.15s;
+      }
+      .add-type-btn.active {
+        background:rgba(167,139,250,0.15);
+        border-color:rgba(167,139,250,0.5);
+        color:#a78bfa;
+      }
+      .add-type-btn:not(.active) {
+        background:#1e1e2a;
+        color:rgba(240,238,255,0.35);
+      }
+      /* Chips de categoria */
+      #addCategoryChips {
+        display:flex; flex-wrap:wrap; gap:7px; padding:4px 0;
+      }
+      .cat-chip {
+        padding:5px 12px; border-radius:20px;
+        font-size:12px; font-weight:600;
+        cursor:pointer; font-family:inherit;
+        border:0.5px solid rgba(167,139,250,0.18);
+        background:#1e1e2a; color:rgba(240,238,255,0.4);
+        transition:all 0.15s; user-select:none;
+      }
+      .cat-chip.selected {
+        background:rgba(167,139,250,0.15);
+        border-color:rgba(167,139,250,0.5);
+        color:#a78bfa;
+      }
+      .cat-chip:hover:not(.selected) {
+        border-color:rgba(167,139,250,0.35);
+        color:rgba(240,238,255,0.7);
+      }
+      /* Preview do pôster */
+      #addPosterWrap {
+        position:relative; border-radius:10px; overflow:hidden;
+        background:#1e1e2a;
+        border:0.5px solid rgba(167,139,250,0.14);
+        aspect-ratio:2/3; width:110px; flex-shrink:0;
+        display:flex; align-items:center; justify-content:center;
+      }
+      #addPosterPreview {
+        width:100%; height:100%; object-fit:cover;
+        display:none; border-radius:10px;
+      }
+      #addPosterPlaceholder {
+        display:flex; flex-direction:column; align-items:center;
+        gap:4px; color:rgba(167,139,250,0.25); font-size:10px;
+        font-weight:600; text-align:center; padding:8px;
+      }
+      /* Sugestões */
+      #addTitleSuggestions {
+        position:absolute; top:100%; left:0; right:0; z-index:200;
+        background:#1e1e2a;
+        border:0.5px solid rgba(167,139,250,0.2);
+        border-radius:0 0 10px 10px;
+        box-shadow:0 8px 32px rgba(0,0,0,0.5);
+        max-height:200px; overflow-y:auto;
+      }
+      .add-suggestion-item {
+        display:flex; align-items:center; gap:10px;
+        padding:8px 12px; cursor:pointer;
+        transition:background 0.12s;
+        color:#f0eeff; font-size:13px;
+      }
+      .add-suggestion-item:hover { background:rgba(167,139,250,0.08); }
+      .add-section { margin-bottom:18px; }
+      .add-poster-row {
+        display:flex; gap:14px; align-items:flex-start;
+      }
+      .add-poster-actions {
+        flex:1; display:flex; flex-direction:column; gap:8px;
+      }
+      .add-poster-btns {
+        display:flex; gap:6px; flex-wrap:wrap;
+      }
+      @media (max-width:480px) {
+        #addModalInner { border-radius:16px 16px 0 0; max-height:95vh; }
+        #addModal { align-items:flex-end; padding:0 !important; }
+      }
+    `;
+    document.head.appendChild(st);
+  }
+
+  /* ── HTML ── */
   const modal = document.createElement("div");
   modal.id = "addModal";
-  modal.className = "hidden fixed inset-0 z-60 flex items-center justify-center modal-overlay p-4";
+  modal.style.cssText = `display:none;position:fixed;inset:0;
+    background:rgba(6,6,12,0.82);z-index:9000;
+    align-items:center;justify-content:center;padding:16px;`;
+
   modal.innerHTML = `
-    <div class="bg-neutral-800 w-full max-w-2xl rounded-xl p-4 md:p-6 relative max-h-[95vh] h-full overflow-y-auto flex flex-col overscroll-contain">
-      <button id="closeAddModal" class="absolute top-4 right-4 text-gray-300 hover:text-white">✕</button>
-      <h3 id="addModalTitle" class="text-2xl font-bold mb-4 flex-shrink-0">Adicionar filme</h3>
-      <div class="flex gap-2 mb-4 flex-shrink-0">
-        <button id="addTypeMovie" type="button" class="px-4 py-2 rounded font-semibold text-sm bg-indigo-600 text-white">🎬 Filme</button>
-        <button id="addTypeSeries" type="button" class="px-4 py-2 rounded font-semibold text-sm bg-neutral-700 text-neutral-300">📺 Série</button>
-      </div>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 flex-grow overflow-y-auto pr-2">
-        <div class="relative">
-          <label class="block mb-1">Título</label>
-          <input id="addTitle" class="w-full rounded p-2 bg-neutral-700" autocomplete="off" />
-          <div id="addTitleSuggestions" class="absolute z-10 w-full bg-neutral-800 border border-neutral-600 rounded-b-md shadow-lg max-h-48 overflow-y-auto hidden"></div>
-          <label class="block mt-3 mb-1">Sinopse</label>
-          <textarea id="addSynopsis" class="w-full rounded p-2 bg-neutral-700 min-h-28"></textarea>
-          <div class="flex gap-2 mt-2">
-            <button id="addGenerateSynopsis" type="button" class="px-3 py-1 bg-indigo-600 rounded">Gerar</button>
-            <button id="addClearSynopsis" type="button" class="px-3 py-1 bg-neutral-700 rounded">Limpar</button>
-          </div>
-        </div>
+    <div id="addModalInner">
+
+      <!-- Cabeçalho fixo -->
+      <div style="display:flex;align-items:center;justify-content:space-between;
+        padding:18px 22px 14px;flex-shrink:0;
+        border-bottom:0.5px solid rgba(167,139,250,0.1);">
         <div>
-          <label class="block mb-1">Pôster (URL)</label>
-          <input id="addPosterUrl" class="w-full rounded p-2 bg-neutral-700" placeholder="https://..." />
-          <div class="flex gap-2 mt-2">
-            <button id="addFetchPoster" type="button" class="px-3 py-1 bg-indigo-600 rounded">Buscar da API</button>
-            <button id="addUploadBtn" type="button" class="px-3 py-1 bg-neutral-700 rounded">Upload</button>
-            <input id="addUploadInput" type="file" accept="image/*" class="hidden" />
-            <button id="addRemovePoster" type="button" class="px-3 py-1 bg-red-600 rounded">Remover</button>
-          </div>
-          <img id="addPosterPreview" class="w-full h-44 object-cover rounded mt-3 bg-neutral-700" style="display:none" />
-          <label class="block mt-3 mb-1">Categorias</label>
-          <select id="addCategories" multiple class="w-full rounded p-2 bg-neutral-700"></select>
-          <div class="flex gap-2 mt-2">
-            <input id="addNewCategory" class="rounded p-2 bg-neutral-700 w-full" placeholder="Nova categoria" />
-            <button id="addCategoryBtnLocal" type="button" class="px-3 py-1 bg-green-600 rounded">Criar</button>
-          </div>
-          <label class="block mt-3 mb-1">URL streaming (opcional)</label>
-          <input id="addStreaming" class="w-full rounded p-2 bg-neutral-700" />
-          <div class="flex items-center gap-2 mt-2">
-            <input id="addRemember" type="checkbox" />
-            <label class="text-sm">Lembrar preferências</label>
+          <h3 id="addModalTitle" style="margin:0;font-size:18px;font-weight:800;
+            color:#f0eeff;letter-spacing:-0.02em;">Adicionar filme</h3>
+        </div>
+        <button id="closeAddModal"
+          style="background:rgba(220,38,38,0.12);border:0.5px solid rgba(220,38,38,0.3);
+            color:#fca5a5;border-radius:8px;padding:5px 12px;cursor:pointer;
+            font-size:12px;font-weight:700;font-family:inherit;">✕ Fechar</button>
+      </div>
+
+      <!-- Tipo: Filme / Série -->
+      <div style="padding:14px 22px 0;flex-shrink:0;display:flex;gap:8px;">
+        <button id="addTypeMovie"  type="button" class="add-type-btn active">🎬 Filme</button>
+        <button id="addTypeSeries" type="button" class="add-type-btn">📺 Série</button>
+      </div>
+
+      <!-- Scroll area -->
+      <div id="addModalScroll">
+
+        <!-- Título (com autocomplete) -->
+        <div class="add-section" style="position:relative;margin-top:18px;">
+          <label class="add-label" for="addTitle">Título</label>
+          <input id="addTitle" class="add-input" autocomplete="off"
+            placeholder="Nome do filme ou série..." />
+          <div id="addTitleSuggestions" style="display:none;"></div>
+        </div>
+
+        <!-- Pôster -->
+        <div class="add-section">
+          <label class="add-label">Pôster</label>
+          <div class="add-poster-row">
+            <div id="addPosterWrap">
+              <div id="addPosterPlaceholder">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                  stroke="rgba(167,139,250,0.3)" stroke-width="1.5">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/>
+                  <circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21,15 16,10 5,21"/>
+                </svg>
+                <span>Sem imagem</span>
+              </div>
+              <img id="addPosterPreview" alt="preview" />
+            </div>
+            <div class="add-poster-actions">
+              <input id="addPosterUrl" class="add-input"
+                placeholder="https://... (URL do pôster)" />
+              <div class="add-poster-btns">
+                <button id="addFetchPoster" type="button" class="add-btn-primary"
+                  style="font-size:12px;padding:8px 14px;">🔍 Buscar API</button>
+                <button id="addUploadBtn"   type="button" class="add-btn-ghost"
+                  style="font-size:12px;padding:8px 14px;">⬆ Upload</button>
+                <input id="addUploadInput" type="file" accept="image/*" style="display:none"/>
+                <button id="addRemovePoster" type="button" class="add-btn-danger"
+                  style="font-size:12px;padding:8px 12px;">✕</button>
+              </div>
+            </div>
           </div>
         </div>
+
+        <!-- Sinopse -->
+        <div class="add-section">
+          <label class="add-label" for="addSynopsis">Sinopse</label>
+          <textarea id="addSynopsis" class="add-input add-textarea"
+            placeholder="Resumo do enredo..."></textarea>
+          <div style="display:flex;gap:8px;margin-top:8px;">
+            <button id="addGenerateSynopsis" type="button" class="add-btn-primary"
+              style="font-size:12px;padding:7px 14px;">✦ Gerar</button>
+            <button id="addClearSynopsis"    type="button" class="add-btn-ghost"
+              style="font-size:12px;padding:7px 14px;">Limpar</button>
+          </div>
+        </div>
+
+        <!-- Categorias (chips) -->
+        <div class="add-section">
+          <label class="add-label">Categorias</label>
+          <!-- select oculto — mantém compatibilidade com o resto do código -->
+          <select id="addCategories" multiple style="display:none;"></select>
+          <div id="addCategoryChips"></div>
+          <div style="display:flex;gap:8px;margin-top:10px;">
+            <input id="addNewCategory" class="add-input"
+              style="flex:1;" placeholder="Nova categoria..." />
+            <button id="addCategoryBtnLocal" type="button" class="add-btn-primary"
+              style="font-size:12px;padding:8px 14px;white-space:nowrap;">+ Criar</button>
+          </div>
+        </div>
+
+        <!-- Streaming -->
+        <div class="add-section">
+          <label class="add-label" for="addStreaming">URL Streaming <span style="opacity:.4;font-weight:400;text-transform:none;letter-spacing:0;">(opcional)</span></label>
+          <input id="addStreaming" class="add-input" placeholder="https://..." />
+          <label style="display:flex;align-items:center;gap:8px;margin-top:10px;
+            cursor:pointer;color:rgba(240,238,255,0.45);font-size:13px;">
+            <input id="addRemember" type="checkbox"
+              style="accent-color:#a78bfa;width:15px;height:15px;" />
+            Lembrar preferências
+          </label>
+        </div>
+
+      </div><!-- /scroll -->
+
+      <!-- Rodapé fixo -->
+      <div style="display:flex;justify-content:space-between;align-items:center;
+        padding:14px 22px;flex-shrink:0;
+        border-top:0.5px solid rgba(167,139,250,0.1);">
+        <button id="cancelAddBtn" type="button" class="add-btn-ghost">Cancelar</button>
+        <button id="confirmAddBtn" type="button" class="add-btn-primary"
+          style="padding:11px 28px;font-size:14px;">Salvar</button>
       </div>
-      <div class="flex justify-between mt-6 flex-shrink-0">
-        <button id="cancelAddBtn" type="button" class="px-4 py-2 bg-neutral-700 rounded">Cancelar</button>
-        <button id="confirmAddBtn" type="button" class="px-4 py-2 bg-green-600 rounded">Salvar</button>
-      </div>
+
     </div>`;
+
+  /* Abre como flex, fecha como none */
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) modal.style.display = "none";
+  });
   document.body.appendChild(modal);
 
-  $("closeAddModal").onclick = () => modal.classList.add("hidden");
-  $("cancelAddBtn").onclick  = () => modal.classList.add("hidden");
-  $("addFetchPoster").onclick = handleFetchPoster;
-  $("addUploadBtn").onclick   = () => $("addUploadInput").click();
+  /* ── Fechar / Cancelar ── */
+  $("closeAddModal").onclick = () => { modal.style.display = "none"; };
+  $("cancelAddBtn").onclick  = () => { modal.style.display = "none"; };
+
+  /* ── Pôster ── */
+  $("addFetchPoster").onclick  = handleFetchPoster;
+  $("addUploadBtn").onclick    = () => $("addUploadInput").click();
   $("addUploadInput").onchange = handlePosterUpload;
   $("addRemovePoster").onclick = () => resetPosterPreview("");
+  $("addPosterUrl").oninput    = (e) => {
+    const url = e.target.value.trim();
+    const prev = $("addPosterPreview");
+    const phld = $("addPosterPlaceholder");
+    if (url) { prev.src = url; prev.style.display="block"; phld.style.display="none"; }
+    else     { prev.style.display="none"; phld.style.display="flex"; }
+  };
 
+  /* ── Tipo Filme / Série ── */
   const btnTypeMovie  = $("addTypeMovie");
   const btnTypeSeries = $("addTypeSeries");
   const addModalTitle = $("addModalTitle");
 
   function setAddMediaType(type) {
     addMediaType = type;
-    if (type === "movie") {
-      btnTypeMovie.className  = "px-4 py-2 rounded font-semibold text-sm bg-indigo-600 text-white";
-      btnTypeSeries.className = "px-4 py-2 rounded font-semibold text-sm bg-neutral-700 text-neutral-300";
-      addModalTitle.textContent = "Adicionar filme";
-    } else {
-      btnTypeSeries.className = "px-4 py-2 rounded font-semibold text-sm bg-indigo-600 text-white";
-      btnTypeMovie.className  = "px-4 py-2 rounded font-semibold text-sm bg-neutral-700 text-neutral-300";
-      addModalTitle.textContent = "Adicionar série";
-    }
+    btnTypeMovie.classList.toggle ("active", type === "movie");
+    btnTypeSeries.classList.toggle("active", type === "tv");
+    addModalTitle.textContent = type === "movie" ? "Adicionar filme" : "Adicionar série";
+    $("addTitleSuggestions").style.display = "none";
     $("addTitleSuggestions").innerHTML = "";
-    $("addTitleSuggestions").classList.add("hidden");
   }
   btnTypeMovie.onclick  = () => setAddMediaType("movie");
   btnTypeSeries.onclick = () => setAddMediaType("tv");
 
+  /* ── Sinopse ── */
   $("addGenerateSynopsis").onclick = () => {
     const t = $("addTitle").value.trim();
     if (!t) return showToast("Digite o título primeiro");
@@ -1104,64 +1364,80 @@ function buildAddMovieUI() {
     showToast("Sinopse gerada (local)");
   };
   $("addClearSynopsis").onclick = () => { $("addSynopsis").value = ""; showToast("Sinopse limpa"); };
+
+  /* ── Nova categoria ── */
   $("addCategoryBtnLocal").onclick = () => {
-    const v = normalizeCategory($("addNewCategory").value);
+    const v = normalizeCategory($("addNewCategory").value.trim());
     if (!v) return showToast("Digite um nome para categoria");
     categoriesSet.add(v);
     $("addNewCategory").value = "";
     rebuildCategoryOptions();
     showToast("Categoria criada!");
   };
+  $("addNewCategory").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") $("addCategoryBtnLocal").click();
+  });
+
   $("confirmAddBtn").onclick = () => handleAddConfirm();
 
+  /* ── Autocomplete título ── */
   let typingTimer;
-  const addTitleInput = $("addTitle");
+  const addTitleInput       = $("addTitle");
   const addTitleSuggestions = $("addTitleSuggestions");
 
   addTitleInput.addEventListener("input", () => {
     clearTimeout(typingTimer);
-    if (addTitleInput.value.length < 3) { addTitleSuggestions.classList.add("hidden"); return; }
+    if (addTitleInput.value.length < 3) { addTitleSuggestions.style.display="none"; return; }
     typingTimer = setTimeout(async () => {
       const term = addTitleInput.value.trim();
       if (term.length >= 3) {
-        const suggestions = addMediaType === "tv" ? await searchTVTMDb(term) : await searchMoviesTMDb(term);
-        renderSuggestions(suggestions);
+        const results = addMediaType === "tv"
+          ? await searchTVTMDb(term)
+          : await searchMoviesTMDb(term);
+        renderSuggestions(results);
       }
     }, 500);
   });
-  addTitleInput.addEventListener("blur",  () => { setTimeout(() => addTitleSuggestions.classList.add("hidden"), 150); });
+  addTitleInput.addEventListener("blur",  () => { setTimeout(() => { addTitleSuggestions.style.display="none"; }, 160); });
   addTitleInput.addEventListener("focus", () => {
-    if (addTitleSuggestions.innerHTML.trim() !== "" && addTitleInput.value.length >= 3)
-      addTitleSuggestions.classList.remove("hidden");
+    if (addTitleSuggestions.innerHTML.trim() && addTitleInput.value.length >= 3)
+      addTitleSuggestions.style.display = "block";
   });
 
   async function renderSuggestions(suggestions) {
     addTitleSuggestions.innerHTML = "";
-    if (!suggestions.length) { addTitleSuggestions.classList.add("hidden"); return; }
-    addTitleSuggestions.classList.remove("hidden");
-    suggestions.slice(0, 5).forEach(item => {
+    if (!suggestions?.length) { addTitleSuggestions.style.display="none"; return; }
+    addTitleSuggestions.style.display = "block";
+    suggestions.slice(0, 6).forEach(item => {
       const div = document.createElement("div");
-      div.className = "px-4 py-2 cursor-pointer hover:bg-neutral-700 flex items-center";
+      div.className = "add-suggestion-item";
       div.onmousedown = (e) => { e.preventDefault(); selectSuggestedItem(item.id); };
-      const posterPath = item.poster_path ? `${TMDB_IMG_BASE_URL}${item.poster_path}` : "https://via.placeholder.com/50x75?text=NP";
-      const displayName = item.title || item.name || "";
-      const dateField = item.release_date || item.first_air_date || "";
-      const releaseYear = dateField ? `(${dateField.split("-")[0]})` : "";
-      div.innerHTML = `<img src="${posterPath}" class="w-8 h-12 object-cover mr-3 rounded" /><span>${escapeHtml(displayName)} ${releaseYear}</span>`;
+      const posterPath = item.poster_path
+        ? `${TMDB_IMG_BASE_URL}${item.poster_path}`
+        : "https://via.placeholder.com/40x60?text=?";
+      const name = item.title || item.name || "";
+      const year = (item.release_date || item.first_air_date || "").split("-")[0];
+      div.innerHTML = `
+        <img src="${posterPath}"
+          style="width:32px;height:48px;object-fit:cover;border-radius:5px;flex-shrink:0;"/>
+        <div>
+          <div style="font-weight:700;font-size:13px;">${escapeHtml(name)}</div>
+          ${year ? `<div style="font-size:11px;color:rgba(240,238,255,0.35);">${year}</div>` : ""}
+        </div>`;
       addTitleSuggestions.appendChild(div);
     });
   }
 
   async function selectSuggestedItem(itemId) {
     const isTV = addMediaType === "tv";
-    showToast(isTV ? "Carregando detalhes da série..." : "Carregando detalhes do filme...");
+    showToast(isTV ? "Carregando série..." : "Carregando filme...");
     const details = isTV ? await fetchTVDetailsTMDb(itemId) : await fetchMovieDetailsTMDb(itemId);
-    addTitleSuggestions.classList.add("hidden");
+    addTitleSuggestions.style.display = "none";
     if (details) {
       tmpTmdbId = String(details.id);
       const displayTitle = details.title || details.name || "";
       const enTitle = await fetchEnglishTitle(details.id, isTV ? "tv" : "movie");
-      tmpOriginalTitle = enTitle || details.title || details.name || displayTitle;
+      tmpOriginalTitle = enTitle || displayTitle;
       $("addTitle").value    = displayTitle;
       $("addSynopsis").value = details.overview || "Sinopse não disponível.";
       const posterUrl = details.poster_path ? `${TMDB_IMG_BASE_URL}${details.poster_path}` : "";
@@ -1170,14 +1446,30 @@ function buildAddMovieUI() {
       const newCats = (details.genres || []).map(g => normalizeCategory(g.name));
       newCats.forEach(c => categoriesSet.add(c));
       rebuildCategoryOptions();
-      const addSel = $("addCategories");
-      if (addSel) Array.from(addSel.options).forEach(o => { o.selected = newCats.includes(o.value); });
-      showToast(isTV ? "Série preenchida automaticamente!" : "Filme preenchido automaticamente!", "success");
+      // Seleciona chips automaticamente
+      setAddSelectedCategories(newCats);
+      showToast(isTV ? "Série preenchida!" : "Filme preenchido!", "success");
     } else {
       showToast("Não foi possível carregar os detalhes.", "warning");
     }
   }
 }
+
+/* ── Helpers de chips de categoria do modal de adição ── */
+function getAddSelectedCategories() {
+  const chips = document.querySelectorAll("#addCategoryChips .cat-chip.selected");
+  return Array.from(chips).map(c => c.dataset.cat);
+}
+function setAddSelectedCategories(cats) {
+  document.querySelectorAll("#addCategoryChips .cat-chip").forEach(chip => {
+    chip.classList.toggle("selected", cats.includes(chip.dataset.cat));
+  });
+  // Sincroniza com o select oculto
+  const addSel = $("addCategories");
+  if (addSel) Array.from(addSel.options).forEach(o => { o.selected = cats.includes(o.value); });
+}
+
+
 
 /* ---- POSTER ACTIONS ---- */
 async function handleFetchPoster() {
@@ -1201,8 +1493,7 @@ async function handleFetchPoster() {
     const newCats = (details.genres || []).map(g => normalizeCategory(g.name));
     newCats.forEach(c => categoriesSet.add(c));
     rebuildCategoryOptions();
-    const addSel = $("addCategories");
-    if (addSel) Array.from(addSel.options).forEach(o => { o.selected = newCats.includes(o.value); });
+    setAddSelectedCategories(newCats);
     showToast(isTV ? "Série preenchida!" : "Filme preenchido!", "success");
   } else {
     showToast("Nenhum detalhe encontrado.", "warning");
@@ -1215,7 +1506,9 @@ async function handlePosterUpload(e) {
   const data = await fileToDataURL(file);
   tmpPosterDataUrl = data; tmpPosterUrl = "";
   const prev = $("addPosterPreview");
+  const phld = $("addPosterPlaceholder");
   if (prev) { prev.src = data; prev.style.display = "block"; }
+  if (phld) phld.style.display = "none";
   const url = $("addPosterUrl");
   if (url) url.value = "";
 }
@@ -1223,7 +1516,9 @@ async function handlePosterUpload(e) {
 function resetPosterPreview(posterUrl = "") {
   tmpPosterDataUrl = ""; tmpPosterUrl = posterUrl;
   const prev = $("addPosterPreview");
+  const phld = $("addPosterPlaceholder");
   if (prev) { prev.src = posterUrl; prev.style.display = posterUrl ? "block" : "none"; }
+  if (phld) phld.style.display = posterUrl ? "none" : "flex";
   const url = $("addPosterUrl");
   if (url) url.value = posterUrl;
 }
@@ -1310,9 +1605,9 @@ async function openAddModal() {
   $("addStreaming").value = userPreferences.defaultStreaming || "";
   $("addRemember").checked = !!(userPreferences.defaultStreaming);
   const defaultCats = userPreferences.defaultCategories || [];
-  const addSel = $("addCategories");
-  if (addSel) Array.from(addSel.options).forEach(o => { o.selected = defaultCats.includes(o.value); });
-  $("addModal").classList.remove("hidden");
+  setAddSelectedCategories(defaultCats);
+  const am = $("addModal");
+  if (am) am.style.display = "flex";
 }
 
 async function handleAddConfirm() {
@@ -1320,8 +1615,7 @@ async function handleAddConfirm() {
   const title = safeText($("addTitle").value).trim();
   if (!title) return showToast("Digite o título", "warning");
   const synopsis = safeText($("addSynopsis").value).trim();
-  const addSel = $("addCategories");
-  const categories = addSel ? Array.from(addSel.selectedOptions).map(o => normalizeCategory(o.value)) : [];
+  const categories = getAddSelectedCategories().map(normalizeCategory);
   categories.forEach(c => categoriesSet.add(c));
   const streamingUrlVal = safeText($("addStreaming").value).trim() || null;
   const remember = $("addRemember").checked;
@@ -1335,7 +1629,7 @@ async function handleAddConfirm() {
   try {
     await addDoc(collection(db, "users", userId, "movies"), payload);
     showToast("Adicionado!", "success");
-    $("addModal").classList.add("hidden");
+    const am2 = $("addModal"); if (am2) am2.style.display = "none";
     if (remember) { userPreferences.defaultStreaming = streamingUrlVal; userPreferences.defaultCategories = categories; }
     else { userPreferences.defaultStreaming = ""; userPreferences.defaultCategories = []; }
     await saveUserPreferences();
@@ -1697,7 +1991,7 @@ function attachGlobalEvents() {
       if (pm && pm.style.display === "flex") { handleClosePlayer(); return; }
       if (mainModal && !mainModal.classList.contains("hidden")) mainModal.classList.add("hidden");
       const am = $("addModal");
-      if (am && !am.classList.contains("hidden")) am.classList.add("hidden");
+      if (am && am.style.display !== "none") am.style.display = "none";
       if (confirmDialog && !confirmDialog.classList.contains("hidden")) confirmDialog.classList.add("hidden");
     }
   });
