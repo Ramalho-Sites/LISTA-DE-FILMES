@@ -4,7 +4,7 @@ Um aplicativo web completo para gerenciar, organizar e assistir filmes e séries
 
 ![Demo do Projeto](imagens/demo.png)
 
-### 🔗 Acesse o site: [Clique aqui para interagir com o projeto!](https://ramalho-sites.github.io/LISTA-DE-FILMES/public/login.html)
+### 🔗 Acesse o site: [Clique aqui para interagir com o projeto!](https://ramalho-sites.github.io/LISTA-DE-FILMES/public/landing.html)
 
 ---
 
