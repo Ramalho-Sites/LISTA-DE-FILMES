@@ -1,176 +1,119 @@
 /* =============================== */
+/* 🎨 PREMIUM SLATE — CSS VARS     */
+/* =============================== */
+:root {
+  --bg:           #0e0e14;
+  --surface:      #16161f;
+  --surface2:     #1e1e2a;
+  --surface3:     #252535;
+  --violet:       #a78bfa;
+  --violet-dim:   #7c5fcc;
+  --violet-glow:  rgba(167,139,250,0.12);
+  --violet-hover: rgba(167,139,250,0.22);
+  --text:         #f0eeff;
+  --muted:        rgba(240,238,255,0.45);
+  --muted2:       rgba(240,238,255,0.25);
+  --border:       rgba(167,139,250,0.14);
+  --border-hover: rgba(167,139,250,0.35);
+  --red:          #ef4444;
+  --green:        #22c55e;
+  --blue:         #3b82f6;
+}
+
+/* =============================== */
 /* 🚀 PERFORMANCE & SCROLL SUAVE   */
 /* =============================== */
+html { scroll-behavior: smooth; background: #0e0e14; height: 100%; }
 
-html {
-  scroll-behavior: smooth;
-}
-
-/* Scroll suave na página principal */
 body {
-  -webkit-overflow-scrolling: touch; /* iOS momentum scroll */
+  background: #0e0e14 !important;
+  color: #f0eeff;
+  -webkit-overflow-scrolling: touch;
+  overflow-y: auto;
+  height: 100%;
 }
 
-/* Grid de filmes — compositing layer própria */
-#movieGrid {
-  will-change: contents;
-}
+#movieGrid { will-change: contents; }
 
 /* =============================== */
-/* 💎 MELHORIA 2: BOTÕES DE FILTRO */
+/* 💎 BOTÕES DE FILTRO             */
 /* =============================== */
-
 .filter-btn, .filter-btn-active {
-  padding: 8px 16px;
-  border-radius: 8px;
-  border: none;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
   cursor: pointer;
   font-weight: 600;
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   transition: all .2s ease;
+  font-family: inherit;
 }
 
 .filter-btn {
-  background-color: #3f3f46;
-  color: #d4d4d4;
+  background: var(--surface2);
+  color: var(--muted);
 }
-
 .filter-btn:hover {
-  background-color: #52525b;
+  background: var(--surface3);
+  border-color: var(--border-hover);
+  color: var(--text);
 }
 
 .filter-btn-active {
-  background-color: #4caf50;
-  color: #ffffff;
-  transform: scale(1.05);
+  background: var(--violet-glow);
+  border-color: rgba(167,139,250,0.45);
+  color: var(--violet);
+  transform: none;
 }
 
 /* =============================== */
-/* 🔔 TOAST (MENSAGENS) */
+/* 🔔 TOAST                        */
 /* =============================== */
-
 .toast {
   position: fixed;
   top: 22px;
   right: 22px;
-  padding: 15px 20px;
-  border-radius: 12px;
+  padding: 12px 18px;
+  border-radius: 10px;
   font-weight: 600;
+  font-size: 13px;
   color: white;
   z-index: 9999;
   opacity: 0;
   visibility: hidden;
-  transform: translateY(-15px);
-  transition: opacity .35s ease, transform .35s ease, visibility .35s ease;
+  transform: translateY(-10px);
+  transition: opacity .3s ease, transform .3s ease, visibility .3s ease;
   pointer-events: none;
 }
-
 .toast.show {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
   pointer-events: auto;
 }
-
-.toast-success { background-color: #4caf50; }
-.toast-error   { background-color: #f44336; }
-.toast-warning { background-color: #ffa000; }
-.toast-info    { background-color: #2196F3; }
-
-/* =============================== */
-/* 💡 LOGIN */
-/* =============================== */
-
-.login-body {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: radial-gradient(circle at center, #141414, #000);
-  min-height: 100vh;
-  padding: 20px;
-  margin: 0;
-  font-family: 'Roboto', sans-serif;
-}
-
-.login-container {
-  width: 360px;
-  max-width: 100%;
-  padding: 45px;
-  background: rgba(25,25,25,0.60);
-  border-radius: 18px;
-  backdrop-filter: blur(14px);
-  text-align: center;
-  box-shadow: 0 12px 40px rgba(0,0,0,0.6);
-  border: 1px solid rgba(255,255,255,0.06);
-}
-
-.login-container input {
-  width: 100%;
-  margin: 12px 0;
-  padding: 12px;
-  background: #0f0f0f;
-  border: 1px solid #444;
-  border-radius: 10px;
-  color: #fff;
-  transition: .25s;
-}
-
-.login-container input:focus {
-  outline: none;
-  border-color: #4caf50;
-  box-shadow: 0 0 12px #4caf5077;
-}
-
-.login-container button {
-  width: 100%;
-  padding: 12px;
-  margin-top: 12px;
-  border-radius: 10px;
-  border: none;
-  font-weight: bold;
-  cursor: pointer;
-  transition: transform .25s ease;
-}
-
-.login-container button:hover {
-  transform: scale(1.05);
-}
-
-#loginBtn {
-  background: linear-gradient(135deg, #4caf50, #66bb6a);
-  color: #fff;
-}
-
-#loginBtn:disabled, #googleBtn:disabled {
-  background: #555;
-  cursor: not-allowed;
-  transform: none;
-}
-
-#googleBtn {
-  background: linear-gradient(135deg, #db4437, #e35d52);
-  color: #fff;
-}
+.toast-success { background: #22c55e; }
+.toast-error   { background: #ef4444; }
+.toast-warning { background: #f59e0b; }
+.toast-info    { background: var(--violet); }
 
 /* =============================== */
-/* 🎞️ GRID DE FILMES */
+/* 🎞️ GRID DE FILMES               */
 /* =============================== */
-
 .poster-card {
   position: relative;
-  border-radius: 0.75rem;
+  border-radius: 12px;
   cursor: pointer;
-  background: #18181b;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  /* 🚀 GPU acceleration para scroll suave */
+  background: var(--surface);
+  border: 0.5px solid var(--border);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   will-change: transform;
   transform: translateZ(0);
   backface-visibility: hidden;
 }
-
 .poster-card:hover {
-  transform: scale(1.05);
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  transform: translateY(-3px) scale(1.02);
+  border-color: var(--border-hover);
+  box-shadow: 0 8px 32px rgba(167,139,250,0.12);
 }
 
 .poster-image {
@@ -178,69 +121,53 @@ body {
   height: 200px;
   object-fit: cover;
   display: block;
-  /* 🚀 Evita repaint desnecessário */
   will-change: opacity;
   transform: translateZ(0);
+  border-radius: 12px 12px 0 0;
+}
+@media (min-width: 640px)  { .poster-image { height: 240px; } }
+@media (min-width: 1024px) { .poster-image { height: 280px; } }
+
+.poster-link {
+  display: block;
+  line-height: 0;
+  position: relative;
+  border-radius: 12px 12px 0 0;
+  overflow: hidden;
 }
 
-@media (min-width: 640px) {
-  .poster-image {
-    height: 240px;
-  }
+.poster-info {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  padding: 1rem;
+  background: linear-gradient(to top, rgba(10,10,18,0.97) 30%, rgba(10,10,18,0.7) 65%, transparent);
+  transition: all 0.3s ease;
 }
 
-@media (min-width: 1024px) {
-  .poster-image {
-    height: 280px;
-  }
-}
-
-/* Título menor no mobile para caber em 2 colunas */
 .poster-title {
   font-weight: 700;
   font-size: 0.85rem;
-  color: white;
-  /* Limita a 2 linhas e corta com ... */
+  color: var(--text);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-
 @media (min-width: 640px) {
   .poster-title {
-    font-size: 1.1rem;
+    font-size: 1rem;
     -webkit-line-clamp: unset;
     overflow: visible;
     display: block;
   }
 }
 
-.poster-info {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 1rem;
-  background: linear-gradient(to top, rgba(0,0,0,0.95) 20%, rgba(0,0,0,0.7) 60%, transparent);
-  opacity: 1;
-  transform: translateY(0);
-  transition: all 0.3s ease;
-}
-
-.poster-title {
-  font-weight: 700;
-  font-size: 1.1rem;
-  color: white;
-}
-
 .poster-description {
-  font-size: 0.85rem;
-  color: #a1a1aa;
+  font-size: 0.82rem;
+  color: var(--muted);
   margin-top: 0.25rem;
   display: none;
 }
-
 @media (min-width: 768px) {
   .poster-description {
     display: block;
@@ -251,50 +178,45 @@ body {
   }
   .poster-card:hover .poster-description {
     opacity: 1;
-    max-height: 100px;
+    max-height: 80px;
   }
 }
 
 /* =============================== */
-/* 💎 MELHORIA 4: MENU DE AÇÕES DO CARD */
+/* 💎 MENU DE AÇÕES DO CARD        */
 /* =============================== */
-
-.poster-info .actions-menu {
-  position: relative;
-  display: inline-block;
-}
+.poster-info .actions-menu { position: relative; display: inline-block; }
 
 .poster-info .actions-menu-btn {
-  background: rgba(40, 40, 40, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: white;
+  background: rgba(30,30,42,0.85);
+  border: 1px solid var(--border);
+  color: var(--muted);
   padding: 4px 8px;
   font-size: 0.8rem;
   border-radius: 6px;
-  transition: background .2s;
   cursor: pointer;
+  transition: all .2s;
+  font-family: inherit;
 }
 .poster-info .actions-menu-btn:hover {
-  background: #3b82f6;
+  background: var(--violet-glow);
+  border-color: var(--border-hover);
+  color: var(--violet);
 }
 
 .poster-info .actions-dropdown {
   display: none;
   position: absolute;
-  bottom: 110%;
-  right: 0;
-  background: #27272a;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  bottom: 110%; right: 0;
+  background: var(--surface2);
+  border: 0.5px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
   width: 120px;
   z-index: 10;
   overflow: hidden;
 }
-
-.poster-info .actions-dropdown.show {
-  display: block;
-}
+.poster-info .actions-dropdown.show { display: block; }
 
 .poster-info .edit-btn,
 .poster-info .delete-btn {
@@ -302,184 +224,145 @@ body {
   width: 100%;
   text-align: left;
   padding: 10px 12px;
-  font-size: 0.9rem;
-  color: white;
+  font-size: 0.85rem;
+  color: var(--text);
   background: transparent;
   border: none;
   cursor: pointer;
+  font-family: inherit;
+  transition: background .15s;
 }
-
-.poster-info .edit-btn:hover {
-  background: #3b82f6;
-}
-.poster-info .delete-btn:hover {
-  background: #ef4444;
-}
+.poster-info .edit-btn:hover   { background: var(--violet-glow); color: var(--violet); }
+.poster-info .delete-btn:hover { background: rgba(239,68,68,0.15); color: #fca5a5; }
 
 .poster-info .read-more-btn {
-  background: rgba(40, 40, 40, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: white;
+  background: rgba(30,30,42,0.85);
+  border: 1px solid var(--border);
+  color: var(--muted);
   padding: 4px 8px;
   font-size: 0.8rem;
   border-radius: 6px;
-  transition: background .2s;
+  cursor: pointer;
+  transition: all .2s;
+  font-family: inherit;
 }
-.poster-info .read-more-btn:hover { 
-  background: #4caf50;
-}
-
-/* =============================== */
-/* 💎 MELHORIA 5: MODAL VIEW/EDIT */
-/* =============================== */
-
-#modalContent .edit-element {
-  display: none;
-}
-
-#modalContent.modal-view-mode .edit-element {
-  display: none !important;
-}
-
-#modalContent:not(.modal-view-mode) .edit-element {
-  display: block;
-}
-#modalContent:not(.modal-view-mode) .edit-element-flex {
-  display: flex;
-}
-
-#modalContent:not(.modal-view-mode) .view-element {
-  display: none !important;
-}
-
-.poster-link {
-  display: block;
-  line-height: 0;
+.poster-info .read-more-btn:hover {
+  background: var(--violet-glow);
+  border-color: var(--border-hover);
+  color: var(--violet);
 }
 
 /* =============================== */
-/* 🌐 BOTÃO DE LINGUAGEM */
+/* 💎 MODAL VIEW/EDIT              */
 /* =============================== */
+#modalContent .edit-element { display: none; }
+#modalContent.modal-view-mode .edit-element { display: none !important; }
+#modalContent:not(.modal-view-mode) .edit-element { display: block; }
+#modalContent:not(.modal-view-mode) .edit-element-flex { display: flex; }
+#modalContent:not(.modal-view-mode) .view-element { display: none !important; }
 
+/* =============================== */
+/* 🌐 BOTÃO DE LINGUAGEM           */
+/* =============================== */
 .lang-btn {
   transition: all .2s ease;
   font-weight: bold;
 }
-
 .lang-btn:hover {
-  background-color: #52525b;
+  background: var(--surface3) !important;
+  border-color: var(--border-hover) !important;
 }
 
 /* =============================== */
-/* 💀 SKELETON LOADING              */
+/* 💀 SKELETON LOADING             */
 /* =============================== */
-
-/* Animação de brilho que percorre o card */
 @keyframes skeleton-shimmer {
   0%   { background-position: -600px 0; }
   100% { background-position:  600px 0; }
 }
 
-/* Classe base do skeleton — substitui o .poster-card enquanto carrega */
 .skeleton-card {
-  border-radius: 0.75rem;
+  border-radius: 12px;
   overflow: hidden;
-  background: #18181b;
+  background: var(--surface);
+  border: 0.5px solid var(--border);
   min-height: 200px;
   cursor: default;
   pointer-events: none;
 }
+@media (min-width: 1024px) { .skeleton-card { min-height: 280px; } }
 
-@media (min-width: 1024px) {
-  .skeleton-card { min-height: 280px; }
-}
-
-/* Bloco genérico com o shimmer */
 .skeleton-shimmer {
-  background: linear-gradient(
-    90deg,
-    #27272a 25%,
-    #3f3f46 50%,
-    #27272a 75%
-  );
+  background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
   background-size: 600px 100%;
   animation: skeleton-shimmer 1.4s ease-in-out infinite;
   border-radius: 4px;
 }
 
-/* Imagem do pôster */
-.skeleton-poster {
-  width: 100%;
-  height: 200px;
-  display: block;
-}
+.skeleton-poster { width: 100%; height: 200px; display: block; }
+@media (min-width: 640px)  { .skeleton-poster { height: 240px; } }
+@media (min-width: 1024px) { .skeleton-poster { height: 280px; } }
 
-@media (min-width: 640px) {
-  .skeleton-poster { height: 240px; }
-}
-
-@media (min-width: 1024px) {
-  .skeleton-poster { height: 280px; }
-}
-
-/* Rodapé do card (área do título + botões) */
 .skeleton-footer {
   padding: 0.75rem 1rem 1rem;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
-
-/* Linha de título */
-.skeleton-title {
-  height: 16px;
-  width: 75%;
-  border-radius: 4px;
-}
-
-/* Linha de subtítulo / descrição curta */
-.skeleton-subtitle {
-  height: 12px;
-  width: 50%;
-  border-radius: 4px;
-  opacity: 0.6;
-}
+.skeleton-title    { height: 14px; width: 75%; border-radius: 4px; }
+.skeleton-subtitle { height: 11px; width: 50%; border-radius: 4px; opacity: 0.5; }
 
 /* =============================== */
-/* ❤️ FAVORITOS                   */
+/* ❤️ FAVORITOS                    */
 /* =============================== */
-
-/* Botão inline dentro do poster-info (ao lado do menu ...) */
 .fav-btn-inline {
-  background: rgba(40, 40, 40, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: white;
+  background: rgba(30,30,42,0.85);
+  border: 1px solid var(--border);
+  color: var(--text);
   padding: 4px 7px;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   border-radius: 6px;
   cursor: pointer;
   transition: transform 0.18s ease, background 0.18s ease;
   line-height: 1;
+  font-family: inherit;
 }
-
 .fav-btn-inline:hover {
   transform: scale(1.2);
-  background: rgba(60, 60, 60, 0.9);
+  background: var(--violet-glow);
+  border-color: var(--border-hover);
 }
-
 .fav-btn-inline:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
   transform: none;
 }
 
-/* Botão "❤️ Favoritos" na barra de filtros */
-.fav-filter-btn {
-  border: 1px solid transparent;
+.fav-filter-btn { border: 1px solid transparent; }
+.fav-filter-btn.filter-btn-active {
+  background: rgba(239,68,68,0.15) !important;
+  border-color: rgba(239,68,68,0.4) !important;
+  color: #fca5a5 !important;
 }
 
-.fav-filter-btn.filter-btn-active {
-  background-color: #e53e3e !important;
-  border-color: #fc8181;
-  color: #fff;
+/* =============================== */
+/* 🔍 SEARCH INPUT                 */
+/* =============================== */
+#searchInput {
+  background: var(--surface) !important;
+  border: 0.5px solid var(--border) !important;
+  color: var(--text) !important;
+  border-radius: 10px !important;
+  transition: border-color .2s !important;
 }
+#searchInput:focus {
+  outline: none !important;
+  border-color: rgba(167,139,250,0.5) !important;
+  background: rgba(167,139,250,0.06) !important;
+}
+#searchInput::placeholder { color: var(--muted2) !important; }
+
+/* =============================== */
+/* 📐 MODAL OVERLAY                */
+/* =============================== */
+.modal-overlay { background: rgba(6,6,12,0.82) !important; }
