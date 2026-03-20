@@ -1550,6 +1550,34 @@ function rebuildCategoryOptions() {
       addSel.appendChild(opt);
     });
   }
+  // Adicionar APÓS o bloco que reconstrói o addSel (select oculto)
+const chipsContainer = document.getElementById("addCategoryChips");
+if (chipsContainer) {
+  // Pega as categorias atualmente selecionadas antes de limpar
+  const currentlySelected = getAddSelectedCategories();
+
+  chipsContainer.innerHTML = "";
+  const texts = textMap[currentLang];
+
+  [...categoriesSet].sort().forEach(c => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "cat-chip" + (currentlySelected.includes(c) ? " selected" : "");
+    chip.dataset.cat = c;
+    chip.textContent = texts[c] || c;
+    chip.onclick = () => {
+      chip.classList.toggle("selected");
+      // Sincroniza com o select oculto
+      const addSel = document.getElementById("addCategories");
+      if (addSel) {
+        Array.from(addSel.options).forEach(o => {
+          o.selected = !!chipsContainer.querySelector(`.cat-chip.selected[data-cat="${o.value}"]`);
+        });
+      }
+    };
+    chipsContainer.appendChild(chip);
+  });
+}
   const fc = $("categoryFilters");
   if (!fc) return;
   fc.innerHTML = "";
